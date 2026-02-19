@@ -1,0 +1,56 @@
+{
+  "resume_summary": "Experienced Application Support Manager with 13+ years progressing from infrastructure engineering to customer-facing operations leadership. Deep full-stack expertise enabling root-cause analysis that prevents issues rather than just resolving them. Proven ability to scale support operations through automation and process optimization while maintaining exceptional customer experience.",
+  "role_tags": [
+    "application support",
+    "customer success",
+    "solutions engineering",
+    "technical account management"
+  ],
+  "industry_tags": [
+    "healthcare IT",
+    "cybersecurity",
+    "saas",
+    "cloud infrastructure",
+    "devops"
+  ],
+  "skills": [
+    "jira",
+    "git",
+    "docker",
+    "python",
+    "sql",
+    "excel",
+    "linux",
+    "networking",
+    "troubleshooting",
+    "process improvement",
+    "vmware",
+    "aws",
+    "confluence",
+    "service delivery",
+    "communication"
+  ],
+  "salary_range": {
+    "min": 130000,
+    "max": 0,
+    "floor": 100000
+  },
+  "priority_companies": [],
+  "scoring": {
+    "primary_role_tags": [
+      "Application Support Manager",
+      "Technical Account Manager"
+    ],
+    "secondary_role_tags": [
+      "Solutions Engineer",
+      "Implementation Manager",
+      "Enterprise Support Manager"
+    ]
+  },
+  "greenhouse_boards": {
+    "SentinelOne": "sentinellabs",
+    "Huntress": "huntress",
+    "Datadog": "datadog"
+  },
+  "ai_prompt_template": ""
+}

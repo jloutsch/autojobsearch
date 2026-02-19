@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+seen_jobs.db
+data/
+reports/
+.env
+.claude/
+*.md

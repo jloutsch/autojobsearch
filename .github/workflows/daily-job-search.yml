@@ -1,0 +1,57 @@
+name: Daily Job Search
+
+on:
+  schedule:
+    # 8:00 AM EST = 13:00 UTC (standard time)
+    # Accepts ~1hr shift during DST
+    - cron: '0 13 * * 1-5'  # Weekdays only
+  workflow_dispatch: # Allow manual trigger for testing
+
+permissions:
+  contents: write  # For committing daily reports
+
+jobs:
+  search:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Download previous seen_jobs database
+        uses: actions/download-artifact@v4
+        with:
+          name: seen-jobs-db
+          path: .
+        continue-on-error: true  # First run won't have this
+
+      - name: Run job search pipeline
+        run: python main.py
+        # Note: AI scoring requires Ollama which is not available in CI.
+        # The pipeline gracefully skips AI scoring and uses rule-based only.
+
+      - name: Upload updated seen_jobs database
+        uses: actions/upload-artifact@v4
+        with:
+          name: seen-jobs-db
+          path: seen_jobs.db
+          retention-days: 90
+          overwrite: true
+
+      - name: Commit daily report and dashboard
+        run: |
+          git config user.name "Job Search Bot"
+          git config user.email "bot@noreply.github.com"
+          git add --force reports/
+          git diff --staged --quiet || git commit -m "Daily job report $(date +%Y-%m-%d)"
+          git push
