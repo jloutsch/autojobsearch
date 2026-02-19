@@ -87,6 +87,22 @@ def generate_dashboard(ranked_jobs: list[dict], output_dir: str = "reports/", fi
   .search-btn:disabled {{ background: #475569; cursor: not-allowed; }}
   .search-status {{ font-size: 12px; color: #94a3b8; }}
 
+  .history-wrapper {{ position: relative; display: inline-block; }}
+  .history-btn {{ background: #334155; border: 1px solid #475569; color: #e2e8f0;
+                  padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px;
+                  font-weight: 500; transition: all 0.15s; }}
+  .history-btn:hover {{ background: #475569; }}
+  .history-dropdown {{ display: none; position: absolute; top: 100%; right: 0; margin-top: 6px;
+                       background: #1e293b; border: 1px solid #475569; border-radius: 8px;
+                       min-width: 220px; max-height: 320px; overflow-y: auto; z-index: 100;
+                       box-shadow: 0 8px 24px rgba(0,0,0,0.4); }}
+  .history-dropdown.visible {{ display: block; }}
+  .history-dropdown a {{ display: block; padding: 10px 16px; color: #e2e8f0; text-decoration: none;
+                         font-size: 13px; border-bottom: 1px solid #334155; transition: background 0.1s; }}
+  .history-dropdown a:last-child {{ border-bottom: none; }}
+  .history-dropdown a:hover {{ background: #334155; }}
+  .history-empty {{ padding: 12px 16px; color: #64748b; font-size: 13px; }}
+
   .progress-panel {{ background: #0f172a; border: 1px solid #334155; border-radius: 8px;
                      margin: 0 32px; padding: 16px; display: none; max-height: 200px;
                      overflow-y: auto; font-family: 'SF Mono', Monaco, Consolas, monospace; }}
@@ -242,6 +258,10 @@ def generate_dashboard(ranked_jobs: list[dict], output_dir: str = "reports/", fi
   <div class="header-right">
     <button class="profile-toggle active" id="profileToggle" onclick="toggleProfile()">Profile</button>
     <button class="search-btn" id="runSearchBtn" onclick="runSearch()">Run Search</button>
+    <div class="history-wrapper">
+      <button class="history-btn" id="historyBtn" onclick="toggleHistory()">Past Results</button>
+      <div class="history-dropdown" id="historyDropdown"></div>
+    </div>
     <span class="search-status" id="searchStatus"></span>
     <div class="ollama-panel">
       <select id="modelSelect"><option value="">Loading models...</option></select>
@@ -1237,6 +1257,52 @@ function sortTable(col) {{
     a.textContent = i === col ? (sortAsc ? '\\u25B2' : '\\u25BC') : '';
   }});
 }}
+
+// --- Past Results ---
+let historyLoaded = false;
+function toggleHistory() {{
+  const dd = document.getElementById('historyDropdown');
+  const isOpen = dd.classList.contains('visible');
+  if (isOpen) {{
+    dd.classList.remove('visible');
+    return;
+  }}
+  if (!historyLoaded) {{
+    loadHistory();
+  }}
+  dd.classList.add('visible');
+}}
+
+async function loadHistory() {{
+  const dd = document.getElementById('historyDropdown');
+  dd.innerHTML = '<div class="history-empty">Loading...</div>';
+  try {{
+    const resp = await fetch('/api/reports');
+    const reports = await resp.json();
+    if (!reports.length) {{
+      dd.innerHTML = '<div class="history-empty">No past results yet</div>';
+      return;
+    }}
+    dd.innerHTML = '';
+    reports.forEach(r => {{
+      const a = document.createElement('a');
+      a.href = '/' + r.filename;
+      a.textContent = r.label;
+      dd.appendChild(a);
+    }});
+    historyLoaded = true;
+  }} catch (e) {{
+    dd.innerHTML = '<div class="history-empty">Failed to load reports</div>';
+  }}
+}}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {{
+  const wrapper = document.querySelector('.history-wrapper');
+  if (wrapper && !wrapper.contains(e.target)) {{
+    document.getElementById('historyDropdown').classList.remove('visible');
+  }}
+}});
 </script>
 
 </body>
