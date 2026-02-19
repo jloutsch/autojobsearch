@@ -208,7 +208,30 @@ def serve_dashboard(port: int = 8080):
         def do_GET(self):
             if self.path == "/" or self.path == "":
                 self.path = "/index.html"
+            elif self.path == "/api/reports":
+                self._handle_list_reports()
+                return
             super().do_GET()
+
+        def _handle_list_reports(self):
+            """Return a JSON list of available HTML report files."""
+            import glob as _glob
+            pattern = os.path.join(reports_dir, "*.html")
+            files = sorted(_glob.glob(pattern), reverse=True)
+            reports = []
+            for f in files:
+                name = os.path.basename(f)
+                if name == "index.html":
+                    continue
+                # Extract date from filename (e.g. 2026-02-19.html)
+                label = name.replace(".html", "")
+                reports.append({"filename": name, "label": label})
+            data = _json.dumps(reports).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
 
         def _check_origin(self):
             """Reject requests from non-localhost origins (CSRF protection)."""
@@ -568,6 +591,15 @@ def serve_dashboard(port: int = 8080):
     bind_addr = os.environ.get("BIND_ADDR", "localhost")
     class ThreadedHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
         daemon_threads = True
+        allow_reuse_address = True
+        allow_reuse_port = True
+
+        def server_bind(self):
+            import socket as _socket
+            self.socket.setsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEADDR, 1)
+            if hasattr(_socket, "SO_REUSEPORT"):
+                self.socket.setsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEPORT, 1)
+            super().server_bind()
 
     with ThreadedHTTPServer((bind_addr, port), DashboardHandler) as server:
         url = f"http://localhost:{port}"

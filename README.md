@@ -2,6 +2,8 @@
 
 Automated daily job search pipeline that discovers, scores, and delivers relevant job listings. Runs locally with a browser-based dashboard or on GitHub Actions for daily automated searches.
 
+![Job search results dashboard](screenshots/job-search-results.png)
+
 ## Features
 
 - **Multi-source scraping** — Pulls listings from Greenhouse ATS boards, CrowdStrike (Workday), RemoteOK, BuiltIn, WeWorkRemotely, and LinkedIn via Google Alerts RSS
@@ -98,6 +100,8 @@ You have two options in the dashboard's Profile panel:
 
 Both options require Ollama running with a downloaded model (see step 3).
 
+![Profile tags auto-populated from resume](screenshots/roles_skills_industries_companies-tags.png)
+
 ### 6. Run a search
 
 Click **Run Search** in the dashboard. The pipeline will:
@@ -110,6 +114,8 @@ Click **Run Search** in the dashboard. The pipeline will:
 6. Display results in the dashboard
 
 Progress streams live to the browser as each phase runs.
+
+![Live pipeline progress with AI scoring](screenshots/resume-analysis_job-scoring.png)
 
 ## Dashboard Guide
 
@@ -153,6 +159,35 @@ The Profile panel lets you edit all search parameters:
 | AI Prompt Template | Custom prompt template for AI scoring (uses `$resume_summary`, `$title`, `$company`, `$description`, `$salary_min`, `$salary_max`, `$location` placeholders) |
 
 Changes are saved to your browser's local storage and to `profile.json` on the server.
+
+## Job Sources
+
+The pipeline searches six different job boards and aggregates the results. All sources are queried using your profile's role tags as search keywords.
+
+| Source | How it works | What it covers |
+|--------|-------------|----------------|
+| **Greenhouse ATS** | Queries company job board APIs directly (JSON). No authentication required. | Add any company that uses Greenhouse by finding their board token from their careers URL (e.g., `boards.greenhouse.io/sentinellabs` → token is `sentinellabs`). Configure boards in `profile.json` under `greenhouse_boards`. |
+| **CrowdStrike (Workday)** | Queries the Workday job search API used by CrowdStrike's careers site. Paginates through results 20 at a time. | CrowdStrike-specific roles. Deduplicates across pages automatically. |
+| **RemoteOK** | Fetches the public JSON API at `remoteok.com`. | Remote-only positions across all companies. All listings are tagged as remote. |
+| **BuiltIn** | Scrapes search result pages from `builtin.com`. Parses job cards for title, company, salary, and location. | US tech jobs across thousands of companies. Supports salary extraction in multiple formats. |
+| **WeWorkRemotely** | Parses the RSS/XML feeds from `weworkremotely.com`. Titles arrive as `Company: Job Title`. | Remote jobs across programming, design, customer support, and more. |
+| **LinkedIn (via Google Alerts)** | Reads Google Alerts RSS feeds configured to monitor LinkedIn job postings. Only includes entries from the last 24 hours. | Any LinkedIn job matching your alert keywords. Requires one-time manual setup (see [Adding LinkedIn alerts](#adding-linkedin-alerts)). |
+
+Sources that were evaluated but aren't viable: **Indeed** (Cloudflare 403 blocks API access) and **Wellfound** (Cloudflare + DataDome anti-bot protection).
+
+Each source module extends `BaseSource` with a `collect()` method that returns standardized `JobListing` objects. The `safe_collect()` wrapper catches exceptions so one source failure never kills the pipeline — the remaining sources still run.
+
+## Seen Jobs and Past Results
+
+Each time the pipeline runs, discovered jobs are stored in a local SQLite database (`seen_jobs.db`) to avoid showing the same listing twice. This means:
+
+- **Jobs appear in search results only once.** After they're scored and delivered, they're marked as "seen" and won't show up in future runs.
+- **Past results are preserved as dated reports.** Every pipeline run generates a timestamped HTML dashboard and markdown report in the `reports/` directory (e.g., `reports/2026-02-19.html`, `reports/2026-02-19.md`).
+- **Access past results from the dashboard.** Click the **Past Results** button in the header to browse all previous search reports by date.
+- **Reset to see all jobs again.** Delete `seen_jobs.db` to clear the history and re-discover all available listings on the next run.
+- **Changing role tags auto-resets.** When you update your role tags in the profile and run a new search from the dashboard, the seen jobs database is automatically cleared so the new keywords get fresh results.
+
+The database is lightweight (a few KB per run) and is gitignored by default. On GitHub Actions, it persists as a workflow artifact with 90-day retention.
 
 ## Headless pipeline
 

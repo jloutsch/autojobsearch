@@ -173,3 +173,24 @@ def test_landing_page(tmp_path):
     with open(filepath) as f:
         content = f.read()
     assert "Run Search" in content
+
+
+@freeze_time("2026-02-19 12:00:00", tz_offset=0)
+def test_past_results_button_rendered(tmp_path):
+    """Dashboard HTML contains the Past Results button and dropdown."""
+    filepath = generate_dashboard([], output_dir=str(tmp_path))
+    with open(filepath) as f:
+        content = f.read()
+    assert "Past Results" in content
+    assert "historyDropdown" in content
+    assert "toggleHistory()" in content
+
+
+@freeze_time("2026-02-19 12:00:00", tz_offset=0)
+def test_past_results_js_included(tmp_path):
+    """Dashboard includes JavaScript for loading and displaying past reports."""
+    filepath = generate_dashboard([], output_dir=str(tmp_path))
+    with open(filepath) as f:
+        content = f.read()
+    assert "/api/reports" in content
+    assert "loadHistory" in content
