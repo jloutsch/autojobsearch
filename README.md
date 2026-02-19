@@ -1,6 +1,6 @@
 # AutoJobSearch
 
-Automated daily job search pipeline that discovers, scores, and delivers relevant job listings. Runs locally with a browser-based dashboard or on GitHub Actions for daily automated searches.
+Job search pipeline that discovers, scores, and delivers relevant job listings. Run searches on-demand from a browser-based dashboard, or schedule daily automation via GitHub Actions.
 
 ![Job search results dashboard](screenshots/job-search-results.png)
 
@@ -12,7 +12,7 @@ Automated daily job search pipeline that discovers, scores, and delivers relevan
 - **Resume-powered profile** — Upload a PDF/DOCX resume or paste resume text to auto-populate your search profile using AI
 - **Interactive dashboard** — Filter by priority, search by keyword, sort by any column, and filter by posting date
 - **Deduplication** — Fuzzy matching across sources + SQLite tracking of previously delivered listings
-- **Daily automation** — GitHub Actions workflow runs weekday mornings and commits reports to the repo
+- **Optional daily automation** — Included GitHub Actions workflow can run weekday mornings and commit reports to the repo
 
 ## Quick Start
 
@@ -207,11 +207,11 @@ docker compose up --build
 
 The dashboard is available at `http://localhost:8080`. Ollama must be running on the host machine — the container connects via `host.docker.internal`.
 
-## GitHub Actions
+## GitHub Actions (Optional)
 
-The included workflow (`.github/workflows/daily-job-search.yml`) runs the pipeline on weekday mornings and commits reports to the repo. AI scoring is skipped in CI since Ollama isn't available — jobs are scored with the rule-based system only.
+An included workflow (`.github/workflows/daily-job-search.yml`) can automate the pipeline on a schedule. By default it's configured for weekday mornings and commits reports to the repo. AI scoring is skipped in CI since Ollama isn't available — jobs are scored with the rule-based system only.
 
-To enable, push the repo to GitHub. The workflow runs automatically on the configured cron schedule or can be triggered manually from the Actions tab.
+To enable: push the repo to GitHub, then go to the Actions tab and enable the workflow. It runs on the configured cron schedule or can be triggered manually.
 
 ## Configuration
 
