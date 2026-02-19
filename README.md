@@ -16,28 +16,16 @@ Job search pipeline that discovers, scores, and delivers relevant job listings. 
 
 ## Quick Start
 
-### 1. Clone and install
+### 1. Clone the repo
 
 ```bash
 git clone https://github.com/jloutsch/autojobsearch.git
 cd autojobsearch
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
 ```
 
-### 2. Set up your profile
+### 2. Install and configure Ollama
 
-Copy the example profile and customize it:
-
-```bash
-cp profile.example.json profile.json
-```
-
-Edit `profile.json` with your own resume summary, role tags, skills, and salary range. Or skip this step and use the dashboard UI to build your profile in Step 5.
-
-### 3. Install and configure Ollama
-
-AI scoring and resume parsing require [Ollama](https://ollama.com) running locally. The pipeline works without it (rule-based scoring only), but AI features significantly improve result quality.
+AI scoring and resume parsing require [Ollama](https://ollama.com) running on your machine. The pipeline works without it (rule-based scoring only), but AI features significantly improve result quality.
 
 **Install Ollama:**
 
@@ -45,11 +33,16 @@ AI scoring and resume parsing require [Ollama](https://ollama.com) running local
 - **Linux:** `curl -fsSL https://ollama.com/install.sh | sh`
 - **Windows:** Download the installer from [ollama.com](https://ollama.com)
 
-**Download a model:**
+**Important:** Install Ollama directly on your machine (not in a Docker container). The desktop install has direct access to your GPU, which makes scoring 10-50x faster. Running Ollama inside a container typically falls back to CPU-only inference, which can take minutes per job instead of seconds.
+
+**Download a model and start Ollama:**
 
 ```bash
 ollama pull llama3.2
+ollama serve
 ```
+
+Ollama runs in the background on port 11434. Leave it running while using the dashboard.
 
 The pipeline defaults to `llama3.2:latest`. You can switch models at any time from the dashboard's model dropdown, or set the `OLLAMA_MODEL` environment variable.
 
@@ -62,27 +55,19 @@ The pipeline defaults to `llama3.2:latest`. You can switch models at any time fr
 | `mistral` | 4.1 GB | Strong at structured JSON output | `ollama pull mistral` |
 | `llama3.1:70b` | 40 GB | Best quality, requires 48+ GB RAM | `ollama pull llama3.1:70b` |
 
-Smaller models (3B and under) are faster but may produce less nuanced fit scores. Larger models give better analysis at the cost of speed — a 70B model can take 30-60 seconds per job vs 2-5 seconds for 3B. For daily automated runs, `llama3.2` is the sweet spot. For one-off deep analysis or resume parsing, pull a larger model and select it from the dashboard dropdown.
+Smaller models (3B and under) are faster but may produce less nuanced fit scores. Larger models give better analysis at the cost of speed — a 70B model can take 30-60 seconds per job vs 2-5 seconds for 3B. For daily runs, `llama3.2` is the sweet spot. For one-off deep analysis or resume parsing, pull a larger model and select it from the dashboard dropdown.
 
-**Start Ollama:**
-
-```bash
-ollama serve
-```
-
-Ollama runs in the background on port 11434. Leave it running while using the dashboard.
-
-**Important:** Install Ollama directly on your machine (not in a Docker container). The desktop install has direct access to your GPU, which makes scoring 10-50x faster. Running Ollama inside a container typically falls back to CPU-only inference, which can take minutes per job instead of seconds. If you're using the Docker setup for the dashboard, it's already configured to connect to Ollama on the host machine via `host.docker.internal`.
-
-### 4. Start the dashboard
+### 3. Start the dashboard
 
 ```bash
-python main.py serve
+docker compose up --build
 ```
 
-This opens the dashboard at `http://localhost:8080` in your browser.
+The dashboard opens at `http://localhost:8080`. The container connects to Ollama on your host machine automatically.
 
-### 5. Build your profile from your resume
+> **No Docker?** You can run directly with Python instead — see [Running without Docker](#running-without-docker) below.
+
+### 4. Build your profile from your resume
 
 You have two options in the dashboard's Profile panel:
 
@@ -98,11 +83,11 @@ You have two options in the dashboard's Profile panel:
 3. AI extracts the same structured tags from the pasted content
 4. The summary field is replaced with a polished professional summary
 
-Both options require Ollama running with a downloaded model (see step 3).
+Both options require Ollama running with a downloaded model (see step 2).
 
 ![Profile tags auto-populated from resume](screenshots/roles_skills_industries_companies-tags.png)
 
-### 6. Run a search
+### 5. Run a search
 
 Click **Run Search** in the dashboard. The pipeline will:
 
@@ -189,23 +174,25 @@ Each time the pipeline runs, discovered jobs are stored in a local SQLite databa
 
 The database is lightweight (a few KB per run) and is gitignored by default. On GitHub Actions, it persists as a workflow artifact with 90-day retention.
 
-## Headless pipeline
+## Running without Docker
 
-Run the pipeline without the dashboard to generate reports directly:
+If you prefer to run directly with Python instead of Docker:
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python main.py serve
+```
+
+This starts the dashboard at `http://localhost:8080`.
+
+To run the pipeline headless (no dashboard, just generate reports):
 
 ```bash
 python main.py
 ```
 
 This produces a markdown report and HTML dashboard in the `reports/` directory.
-
-## Docker
-
-```bash
-docker compose up --build
-```
-
-The dashboard is available at `http://localhost:8080`. Ollama must be running on the host machine — the container connects via `host.docker.internal`.
 
 ## GitHub Actions (Optional)
 
