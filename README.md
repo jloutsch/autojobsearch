@@ -33,7 +33,7 @@ Copy the example profile and customize it:
 cp profile.example.json profile.json
 ```
 
-Edit `profile.json` with your own resume summary, role tags, skills, and salary range. Or skip this step and use the dashboard UI to build your profile (see below).
+Edit `profile.json` with your own resume summary, role tags, skills, and salary range. Or skip this step and use the dashboard UI to build your profile in Step 5.
 
 ### 3. Install and configure Ollama
 
