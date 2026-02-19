@@ -19,7 +19,7 @@ Job search pipeline that discovers, scores, and delivers relevant job listings. 
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/your-username/autojobsearch.git
+git clone https://github.com/jloutsch/autojobsearch.git
 cd autojobsearch
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
