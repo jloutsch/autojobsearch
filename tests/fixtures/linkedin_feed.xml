@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Google Alert - customer success manager</title>
+  <entry>
+    <title>Customer Success Manager at CloudCo</title>
+    <link href="https://www.google.com/url?url=https://linkedin.com/jobs/view/12345&amp;ct=ga"/>
+    <published>2026-02-19T08:00:00Z</published>
+    <updated>2026-02-19T08:00:00Z</updated>
+    <content type="html">Leading customer success team in a saas environment.</content>
+  </entry>
+  <entry>
+    <title>Customer Success Manager - OldCorp</title>
+    <link href="https://www.google.com/url?url=https://linkedin.com/jobs/view/67890&amp;ct=ga"/>
+    <published>2026-02-17T08:00:00Z</published>
+    <updated>2026-02-17T08:00:00Z</updated>
+    <content type="html">Customer success role at OldCorp.</content>
+  </entry>
+</feed>

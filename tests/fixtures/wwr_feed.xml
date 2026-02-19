@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>WeWorkRemotely Jobs</title>
+    <item>
+      <title>SecureTech: Customer Success Manager</title>
+      <link>https://weworkremotely.com/jobs/securetech-csm</link>
+      <pubDate>Tue, 18 Feb 2026 10:00:00 +0000</pubDate>
+      <region>Anywhere in the World</region>
+      <type>Full-Time</type>
+      <description>&lt;p&gt;We need a customer success manager. Salary: $130k-$150k. Experience with cybersecurity and jira required.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>DevShop: Backend Engineer</title>
+      <link>https://weworkremotely.com/jobs/devshop-backend</link>
+      <pubDate>Mon, 17 Feb 2026 08:00:00 +0000</pubDate>
+      <region>USA Only</region>
+      <type>Full-Time</type>
+      <description>&lt;p&gt;Looking for a backend engineer with python and docker experience.&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

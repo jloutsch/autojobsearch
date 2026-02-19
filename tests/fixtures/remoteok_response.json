@@ -1,0 +1,25 @@
+[
+  {"legal": "RemoteOK API terms of use."},
+  {
+    "id": "2001",
+    "position": "Customer Success Manager",
+    "company": "RemoteCo",
+    "url": "https://remoteok.com/jobs/2001",
+    "description": "Manage customer success in a saas cybersecurity company using jira and python.",
+    "salary_min": 120000,
+    "salary_max": 150000,
+    "location": "Worldwide",
+    "date": "2026-02-18T09:00:00Z"
+  },
+  {
+    "id": "2002",
+    "position": "Senior Software Developer",
+    "company": "TechCorp",
+    "url": "https://remoteok.com/jobs/2002",
+    "description": "Full stack developer.",
+    "salary_min": null,
+    "salary_max": null,
+    "location": "",
+    "date": "2026-02-17T12:00:00Z"
+  }
+]

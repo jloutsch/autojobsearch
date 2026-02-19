@@ -1,0 +1,31 @@
+{
+  "jobs": [
+    {
+      "id": 1001,
+      "title": "Application Support Manager",
+      "absolute_url": "https://boards.greenhouse.io/sentinellabs/jobs/1001",
+      "location": {"name": "Remote - US"},
+      "content": "We are looking for an Application Support Manager with cybersecurity experience and jira skills.",
+      "first_published": "2026-02-18T10:00:00Z",
+      "updated_at": "2026-02-18T12:00:00Z"
+    },
+    {
+      "id": 1002,
+      "title": "Senior Software Engineer",
+      "absolute_url": "https://boards.greenhouse.io/sentinellabs/jobs/1002",
+      "location": {"name": "San Francisco, CA"},
+      "content": "Backend engineer role.",
+      "first_published": "2026-02-15T08:00:00Z",
+      "updated_at": "2026-02-15T08:00:00Z"
+    },
+    {
+      "id": 1003,
+      "title": "Customer Success Manager",
+      "absolute_url": "https://boards.greenhouse.io/sentinellabs/jobs/1003",
+      "location": null,
+      "content": "Manage enterprise customer relationships in saas environment.",
+      "first_published": "2026-02-17T14:00:00Z",
+      "updated_at": "2026-02-17T14:00:00Z"
+    }
+  ]
+}

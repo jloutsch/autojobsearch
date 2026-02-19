@@ -1,0 +1,49 @@
+{
+  "resume_summary": "Experienced Application Support Manager with 10+ years in customer-facing technical operations.",
+  "role_tags": [
+    "application support",
+    "customer success",
+    "solutions engineering",
+    "technical account management"
+  ],
+  "industry_tags": [
+    "healthcare IT",
+    "cybersecurity",
+    "saas",
+    "cloud infrastructure",
+    "devops"
+  ],
+  "skills": [
+    "jira",
+    "git",
+    "docker",
+    "python",
+    "sql",
+    "linux",
+    "troubleshooting",
+    "aws",
+    "confluence",
+    "communication"
+  ],
+  "salary_range": {
+    "min": 130000,
+    "max": 160000,
+    "floor": 100000
+  },
+  "priority_companies": ["SentinelOne", "CrowdStrike"],
+  "scoring": {
+    "primary_role_tags": [
+      "Application Support Manager",
+      "Technical Account Manager"
+    ],
+    "secondary_role_tags": [
+      "Solutions Engineer",
+      "Implementation Manager"
+    ]
+  },
+  "greenhouse_boards": {
+    "SentinelOne": "sentinellabs",
+    "Datadog": "datadog"
+  },
+  "ai_prompt_template": ""
+}

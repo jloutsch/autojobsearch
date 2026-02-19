@@ -1,0 +1,17 @@
+{
+  "jobPostings": [
+    {
+      "title": "Senior Customer Success Manager",
+      "externalPath": "/job/csm-001",
+      "locationsText": "Remote - USA",
+      "postedOn": "Posted 2 Days Ago"
+    },
+    {
+      "title": "Customer Success Engineer",
+      "externalPath": "/job/cse-001",
+      "locationsText": "Austin, TX",
+      "postedOn": "Today"
+    }
+  ],
+  "total": 2
+}
