@@ -182,3 +182,66 @@ def test_is_non_us_short_signals_word_boundary():
     assert _is_non_us("uk") is True
     assert _is_non_us("bulk order") is False
     assert _is_non_us("uae") is True
+
+
+# --- Additional edge cases ---
+
+
+def test_state_abbreviation_word_boundary(make_job):
+    """2-letter state abbreviations matched as whole words in original case."""
+    # "FL" as a word boundary should be detected as pinned to Florida
+    job = make_job(location="Remote, FL, USA", is_remote=True)
+    assert _passes_location_filter(job) is False
+
+
+def test_location_with_state_abbreviation_rejected(make_job):
+    """'Remote, FL' pinned to Florida is rejected."""
+    job = make_job(location="FL, USA, Remote", is_remote=True)
+    assert passes_hard_filters(job) is False
+
+
+def test_comma_separated_states_pinned(make_job):
+    """'CA, NY, TX' detected as pinned to specific states."""
+    job = make_job(location="Remote in CA, NY, TX", is_remote=True)
+    assert _passes_location_filter(job) is False
+
+
+def test_us_wide_remote_with_worldwide(make_job):
+    """'Worldwide' passes as US-wide remote."""
+    assert _is_us_wide_remote("worldwide", "Worldwide", "", "") is True
+
+
+def test_non_remote_non_boston_rejected(make_job):
+    """On-site role in non-Boston city is rejected (line 137)."""
+    job = make_job(location="Denver, CO", is_remote=False)
+    assert _passes_location_filter(job) is False
+
+
+def test_location_us_abbreviations_pass(make_job):
+    """'us', 'u.s.', 'u.s.a.' accepted as US-wide (line 152-153)."""
+    for loc in ("us", "u.s.", "u.s.a."):
+        assert _is_us_wide_remote(loc, loc, "", "") is True
+
+
+def test_description_restriction_to_boston_passes(make_job):
+    """Description restriction 'must be located in Boston' passes (line 194-198)."""
+    assert _is_us_wide_remote(
+        "remote", "Remote", "",
+        "must be located in boston, ma area"
+    ) is True
+
+
+def test_description_restriction_to_other_rejects(make_job):
+    """Description restriction 'must be located in Denver' rejects (line 199-200)."""
+    # Location must not be just "remote" (that matches line 144 and returns True early).
+    # Use a more specific location that doesn't match the early returns.
+    assert _is_us_wide_remote(
+        "remote position available", "Remote Position Available", "",
+        "must be located in denver, colorado"
+    ) is False
+
+
+def test_state_name_in_location_pinned(make_job):
+    """Full state name 'florida' in location detected as pinned (line 211-213)."""
+    from filters import _is_pinned_to_non_boston_location
+    assert _is_pinned_to_non_boston_location("remote, florida", "Remote, Florida") is True

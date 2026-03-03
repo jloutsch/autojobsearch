@@ -96,12 +96,13 @@ def dashboard_server(tmp_path, monkeypatch):
             body = self.rfile.read(length)
             try:
                 data = json.loads(body)
-            except json.JSONDecodeError:
+            except (json.JSONDecodeError, ValueError):
+                resp_body = b'{"error":"Invalid JSON"}'
                 self.send_response(400)
                 self.send_header("Content-Type", "application/json")
-                self.send_header("Content-Length", "25")
+                self.send_header("Content-Length", str(len(resp_body)))
                 self.end_headers()
-                self.wfile.write(b'{"error":"Invalid JSON"}')
+                self.wfile.write(resp_body)
                 return
             if not self._validate_profile(data):
                 resp_body = b'{"error":"Invalid profile structure"}'
@@ -305,3 +306,102 @@ def test_get_reports_excludes_index(dashboard_server, tmp_path):
     filenames = [r["filename"] for r in data]
     assert "index.html" not in filenames
     assert "2026-02-19.html" in filenames
+
+
+# --- Additional HTTP handler edge cases ---
+
+
+def test_put_profile_invalid_json(dashboard_server):
+    """Malformed JSON body returns 400."""
+    resp = requests.put(
+        f"{dashboard_server}/api/profile",
+        data=b"not json {{{",
+        headers={"Content-Type": "application/json"},
+        timeout=5,
+    )
+    assert resp.status_code == 400
+    assert "Invalid JSON" in resp.json()["error"]
+
+
+def test_put_profile_non_dict(dashboard_server):
+    """Array body returns 400 (not a valid profile structure)."""
+    resp = requests.put(
+        f"{dashboard_server}/api/profile",
+        json=["not", "a", "dict"],
+        timeout=5,
+    )
+    assert resp.status_code == 400
+
+
+def test_put_profile_salary_non_numeric(dashboard_server):
+    """String salary value rejected."""
+    profile = {
+        "role_tags": ["test"],
+        "industry_tags": [],
+        "skills": [],
+        "priority_companies": [],
+        "salary_range": {"min": "not a number", "max": 0, "floor": 80000},
+        "resume_summary": "Test",
+        "ai_prompt_template": "",
+    }
+    resp = requests.put(
+        f"{dashboard_server}/api/profile",
+        json=profile,
+        timeout=5,
+    )
+    assert resp.status_code == 400
+
+
+def test_cache_control_header(dashboard_server):
+    """Responses include Cache-Control: no-store."""
+    resp = requests.get(f"{dashboard_server}/", timeout=5)
+    assert resp.headers.get("Cache-Control") == "no-store"
+
+
+def test_get_nonexistent_file_404(dashboard_server):
+    """GET /nonexistent.html returns 404."""
+    resp = requests.get(f"{dashboard_server}/nonexistent.html", timeout=5)
+    assert resp.status_code == 404
+
+
+def test_put_unknown_path_404(dashboard_server):
+    """PUT /api/unknown returns 404."""
+    resp = requests.put(
+        f"{dashboard_server}/api/unknown",
+        json={"test": True},
+        timeout=5,
+    )
+    assert resp.status_code == 404
+
+
+def test_put_profile_role_tags_not_strings(dashboard_server):
+    """role_tags containing non-strings rejected."""
+    profile = {
+        "role_tags": [123, None],
+        "salary_range": {},
+    }
+    resp = requests.put(
+        f"{dashboard_server}/api/profile",
+        json=profile,
+        timeout=5,
+    )
+    assert resp.status_code == 400
+
+
+def test_put_profile_oversized_template(dashboard_server):
+    """ai_prompt_template > 10000 chars rejected."""
+    profile = {
+        "role_tags": ["test"],
+        "industry_tags": [],
+        "skills": [],
+        "priority_companies": [],
+        "salary_range": {},
+        "resume_summary": "",
+        "ai_prompt_template": "x" * 10001,
+    }
+    resp = requests.put(
+        f"{dashboard_server}/api/profile",
+        json=profile,
+        timeout=5,
+    )
+    assert resp.status_code == 400
