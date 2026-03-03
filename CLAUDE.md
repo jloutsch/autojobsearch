@@ -40,8 +40,11 @@ Four-phase pipeline orchestrated by `main.py`:
 | Remotive | `sources/remotive.py` | JSON API | `customer-support` category; max 2 req/min, all remote |
 | Himalayas | `sources/himalayas.py` | JSON API | Paginated (20/page, up to 5 pages); all remote |
 | Jobicy | `sources/jobicy.py` | JSON API | Two queries: `supporting` + `management` industries; all remote |
+| Jobspresso | `sources/jobspresso.py` | RSS 2.0 XML | `s=` keyword search; company/location in `dc:creator`; all remote |
+| Working Nomads | `sources/workingnomads.py` | JSON API | Bare array; `category_name` filtering; ~29 total jobs; all remote |
+| YC Work at a Startup | `sources/workatastartup.py` | HTML scraping | `?role=support` + `?role=sales` params; strip YC batch from company |
 
-**Not viable:** Indeed RSS (Cloudflare 403), Wellfound (Cloudflare + DataDome)
+**Not viable:** Indeed RSS (Cloudflare 403), Wellfound (Cloudflare + DataDome), Support Driven (Cloudflare JS challenge), Remoters.net (JS-loaded, no API)
 
 ## AI Scoring (Ollama)
 
