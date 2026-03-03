@@ -15,8 +15,11 @@ from scorer import rule_based_score
 from sources.builtin import BuiltInSource
 from sources.crowdstrike import CrowdStrikeSource
 from sources.greenhouse import GreenhouseSource
+from sources.himalayas import HimalayasSource
+from sources.jobicy import JobicySource
 from sources.linkedin_alerts import LinkedInAlertsSource
 from sources.remoteok import RemoteOKSource
+from sources.remotive import RemotiveSource
 from sources.weworkremotely import WeWorkRemotelySource
 
 logging.basicConfig(
@@ -44,6 +47,9 @@ def run_pipeline():
         BuiltInSource(),
         WeWorkRemotelySource(),
         LinkedInAlertsSource(),
+        RemotiveSource(),
+        HimalayasSource(),
+        JobicySource(),
     ]
 
     raw_jobs = []

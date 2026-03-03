@@ -194,3 +194,125 @@ def test_past_results_js_included(tmp_path):
         content = f.read()
     assert "/api/reports" in content
     assert "loadHistory" in content
+
+
+# --- Additional edge cases ---
+
+
+@freeze_time("2026-02-19 12:00:00", tz_offset=0)
+def test_generate_landing_page_creates_index(tmp_path):
+    """generate_landing_page creates index.html with correct content."""
+    from dashboard import generate_landing_page
+    filepath = generate_landing_page(output_dir=str(tmp_path))
+    assert filepath.endswith("index.html")
+    assert os.path.exists(filepath)
+    with open(filepath) as f:
+        content = f.read()
+    assert "Run Search" in content
+    assert "<!DOCTYPE html>" in content
+
+
+def test_render_row_with_summary():
+    """AI summary rendered in row."""
+    job = {
+        "title": "CSM",
+        "company": "Corp",
+        "url": "https://example.com",
+        "source": "test",
+        "score": 45,
+        "priority": "high",
+        "salary_min": 130000,
+        "salary_max": 150000,
+        "location": "Remote",
+        "posted_date": "2026-02-18T10:00:00+00:00",
+        "summary": "Great fit for cybersecurity background.",
+    }
+    html = _render_row(job)
+    assert "Great fit for cybersecurity background." in html
+    assert "priority-high" in html
+
+
+def test_render_row_html_escaping_title():
+    """XSS in title/company escaped."""
+    job = {
+        "title": '<script>alert("xss")</script>',
+        "company": '<img onerror="alert(1)">',
+        "url": "https://example.com",
+        "source": "test",
+        "score": 10,
+        "priority": "low",
+        "salary_min": 0,
+        "salary_max": 0,
+        "location": "Remote",
+        "posted_date": "",
+        "summary": "",
+    }
+    html = _render_row(job)
+    assert '<script>' not in html
+    assert '&lt;script&gt;' in html
+    assert '<img' not in html
+    assert '&lt;img' in html
+
+
+@freeze_time("2026-02-19 12:00:00", tz_offset=0)
+def test_generate_dashboard_custom_filename(tmp_path):
+    """Custom filename parameter works."""
+    filepath = generate_dashboard(
+        [], output_dir=str(tmp_path), filename="custom.html"
+    )
+    assert filepath.endswith("custom.html")
+    assert os.path.exists(filepath)
+
+
+def test_salary_min_only():
+    """salary_min > 0 but salary_max = 0 → '$X+' display."""
+    job = {
+        "title": "CSM",
+        "company": "Corp",
+        "url": "https://example.com",
+        "source": "test",
+        "score": 30,
+        "priority": "medium",
+        "salary_min": 120000,
+        "salary_max": 0,
+        "location": "Remote",
+        "posted_date": "",
+        "summary": "",
+    }
+    html = _render_row(job)
+    assert "$120,000+" in html
+
+
+@freeze_time("2026-02-19 12:00:00", tz_offset=0)
+def test_format_age_naive_datetime():
+    """Naive datetime (no tzinfo) treated as UTC (line 1334-1335)."""
+    result = _format_age("2026-02-19T11:00:00")
+    assert result == "1h ago"
+
+
+@freeze_time("2026-02-19 12:00:00", tz_offset=0)
+def test_format_age_one_week():
+    """8 days ago → '1 week ago' (line 1347-1348)."""
+    result = _format_age("2026-02-11T12:00:00+00:00")
+    assert result == "1 week ago"
+
+
+@freeze_time("2026-02-19 12:00:00", tz_offset=0)
+def test_format_age_weeks():
+    """16 days ago → '2 weeks ago' (line 1349-1350)."""
+    result = _format_age("2026-02-03T12:00:00+00:00")
+    assert result == "2 weeks ago"
+
+
+@freeze_time("2026-02-19 12:00:00", tz_offset=0)
+def test_format_age_one_month():
+    """35 days ago → '1 month ago' (line 1351-1352)."""
+    result = _format_age("2026-01-15T12:00:00+00:00")
+    assert result == "1 month ago"
+
+
+@freeze_time("2026-02-19 12:00:00", tz_offset=0)
+def test_format_age_months():
+    """90 days ago → '3 months ago' (line 1353-1354)."""
+    result = _format_age("2025-11-21T12:00:00+00:00")
+    assert result == "3 months ago"

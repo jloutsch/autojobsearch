@@ -188,4 +188,235 @@ def test_previously_sent_excluded(
         from main import run_pipeline
         result = run_pipeline()
 
+    # Jobs in seen_jobs.db are excluded
     assert result == []
+
+
+# --- Additional edge cases ---
+
+
+@patch("main.generate_dashboard")
+@patch("main.save_daily_report")
+@patch("main.score_top_jobs")
+@patch("main.mark_as_sent")
+@patch("main.was_previously_sent", return_value=False)
+@patch("main.is_duplicate", return_value=False)
+@patch("main.passes_hard_filters")
+@patch("main.init_db")
+def test_pipeline_all_filtered_out(
+    mock_init_db, mock_filters, mock_dedup, mock_sent, mock_mark,
+    mock_ai, mock_report, mock_dash
+):
+    """All jobs filtered → empty report."""
+    mock_filters.return_value = False  # All jobs fail filter
+    mock_report.return_value = "reports/2026-02-19.md"
+
+    job = _make_job()
+    with patch("main.GreenhouseSource") as gs, \
+         patch("main.CrowdStrikeSource") as cs, \
+         patch("main.RemoteOKSource") as rs, \
+         patch("main.BuiltInSource") as bs, \
+         patch("main.WeWorkRemotelySource") as ws, \
+         patch("main.LinkedInAlertsSource") as ls:
+        gs.return_value.safe_collect.return_value = [job]
+        for mock_src in [cs, rs, bs, ws, ls]:
+            mock_src.return_value.safe_collect.return_value = []
+
+        from main import run_pipeline
+        result = run_pipeline()
+
+    assert result == []
+
+
+@patch("main.generate_dashboard")
+@patch("main.save_daily_report")
+@patch("main.score_top_jobs")
+@patch("main.mark_as_sent")
+@patch("main.was_previously_sent", return_value=True)
+@patch("main.is_duplicate", return_value=False)
+@patch("main.passes_hard_filters", return_value=True)
+@patch("main.init_db")
+def test_pipeline_all_seen_before(
+    mock_init_db, mock_filters, mock_dedup, mock_sent, mock_mark,
+    mock_ai, mock_report, mock_dash
+):
+    """All jobs previously sent → empty report."""
+    mock_report.return_value = "reports/2026-02-19.md"
+
+    job = _make_job()
+    with patch("main.GreenhouseSource") as gs, \
+         patch("main.CrowdStrikeSource") as cs, \
+         patch("main.RemoteOKSource") as rs, \
+         patch("main.BuiltInSource") as bs, \
+         patch("main.WeWorkRemotelySource") as ws, \
+         patch("main.LinkedInAlertsSource") as ls:
+        gs.return_value.safe_collect.return_value = [job]
+        for mock_src in [cs, rs, bs, ws, ls]:
+            mock_src.return_value.safe_collect.return_value = []
+
+        from main import run_pipeline
+        result = run_pipeline()
+
+    assert result == []
+
+
+@patch("main.generate_dashboard")
+@patch("main.save_daily_report")
+@patch("main.score_top_jobs")
+@patch("main.mark_as_sent")
+@patch("main.was_previously_sent", return_value=False)
+@patch("main.is_duplicate", return_value=False)
+@patch("main.passes_hard_filters", return_value=True)
+@patch("main.init_db")
+def test_pipeline_ai_score_combined(
+    mock_init_db, mock_filters, mock_dedup, mock_sent, mock_mark,
+    mock_ai, mock_report, mock_dash
+):
+    """AI score + rule score combined correctly."""
+    job = _make_job()
+    ai_result = {
+        "fit_score": 35,
+        "summary": "Good match.",
+        "key_matches": ["cybersecurity"],
+        "gaps": [],
+        "priority": "high",
+    }
+    mock_ai.return_value = [ai_result]
+    mock_report.return_value = "reports/2026-02-19.md"
+    mock_dash.return_value = "reports/2026-02-19.html"
+
+    with patch("main.GreenhouseSource") as gs, \
+         patch("main.CrowdStrikeSource") as cs, \
+         patch("main.RemoteOKSource") as rs, \
+         patch("main.BuiltInSource") as bs, \
+         patch("main.WeWorkRemotelySource") as ws, \
+         patch("main.LinkedInAlertsSource") as ls:
+        gs.return_value.safe_collect.return_value = [job]
+        for mock_src in [cs, rs, bs, ws, ls]:
+            mock_src.return_value.safe_collect.return_value = []
+
+        from main import run_pipeline
+        result = run_pipeline()
+
+    assert len(result) == 1
+    assert result[0]["score"] > 35  # rule_based_score adds to the 35
+    assert result[0]["priority"] == "high"
+    assert result[0]["summary"] == "Good match."
+    assert result[0]["key_matches"] == ["cybersecurity"]
+
+
+@patch("main.generate_dashboard")
+@patch("main.save_daily_report")
+@patch("main.score_top_jobs")
+@patch("main.mark_as_sent")
+@patch("main.was_previously_sent", return_value=False)
+@patch("main.is_duplicate", return_value=False)
+@patch("main.passes_hard_filters", return_value=True)
+@patch("main.init_db")
+def test_pipeline_sorts_by_score(
+    mock_init_db, mock_filters, mock_dedup, mock_sent, mock_mark,
+    mock_ai, mock_report, mock_dash
+):
+    """Output sorted descending by score."""
+    job1 = _make_job(title="Low Score CSM", salary_min=0, salary_max=0,
+                     description="basic role")
+    job2 = _make_job(title="Customer Success Manager", url="https://example.com/job/2",
+                     description="A cybersecurity saas role with jira experience.")
+
+    mock_ai.return_value = [None, None]
+    mock_report.return_value = "reports/2026-02-19.md"
+    mock_dash.return_value = "reports/2026-02-19.html"
+
+    with patch("main.GreenhouseSource") as gs, \
+         patch("main.CrowdStrikeSource") as cs, \
+         patch("main.RemoteOKSource") as rs, \
+         patch("main.BuiltInSource") as bs, \
+         patch("main.WeWorkRemotelySource") as ws, \
+         patch("main.LinkedInAlertsSource") as ls:
+        gs.return_value.safe_collect.return_value = [job1, job2]
+        for mock_src in [cs, rs, bs, ws, ls]:
+            mock_src.return_value.safe_collect.return_value = []
+
+        from main import run_pipeline
+        result = run_pipeline()
+
+    assert len(result) == 2
+    assert result[0]["score"] >= result[1]["score"]
+
+
+@patch("main.generate_dashboard")
+@patch("main.save_daily_report")
+@patch("main.score_top_jobs")
+@patch("main.mark_as_sent")
+@patch("main.was_previously_sent", return_value=False)
+@patch("main.is_duplicate", return_value=False)
+@patch("main.passes_hard_filters", return_value=True)
+@patch("main.init_db")
+def test_pipeline_priority_assignment(
+    mock_init_db, mock_filters, mock_dedup, mock_sent, mock_mark,
+    mock_ai, mock_report, mock_dash
+):
+    """Rule-only: >=30 high, >=20 medium, else low."""
+    job = _make_job()
+    mock_ai.return_value = [None]
+    mock_report.return_value = "reports/2026-02-19.md"
+    mock_dash.return_value = "reports/2026-02-19.html"
+
+    with patch("main.GreenhouseSource") as gs, \
+         patch("main.CrowdStrikeSource") as cs, \
+         patch("main.RemoteOKSource") as rs, \
+         patch("main.BuiltInSource") as bs, \
+         patch("main.WeWorkRemotelySource") as ws, \
+         patch("main.LinkedInAlertsSource") as ls:
+        gs.return_value.safe_collect.return_value = [job]
+        for mock_src in [cs, rs, bs, ws, ls]:
+            mock_src.return_value.safe_collect.return_value = []
+
+        from main import run_pipeline
+        result = run_pipeline()
+
+    assert len(result) == 1
+    assert result[0]["priority"] in ("high", "medium", "low")
+
+
+@patch("main.generate_dashboard")
+@patch("main.save_daily_report")
+@patch("main.score_top_jobs")
+@patch("main.mark_as_sent")
+@patch("main.was_previously_sent", return_value=False)
+@patch("main.is_duplicate", return_value=False)
+@patch("main.passes_hard_filters", return_value=True)
+@patch("main.init_db")
+def test_pipeline_high_priority_rule_only(
+    mock_init_db, mock_filters, mock_dedup, mock_sent, mock_mark,
+    mock_ai, mock_report, mock_dash
+):
+    """Rule score >= 30 → 'high' priority without AI (line 106)."""
+    # Create a job that scores 30+: primary title match (15) + priority company (10) + salary (10) = 35
+    job = _make_job(
+        title="Application Support Manager",  # primary role tag
+        company="SentinelOne",  # priority company
+        salary_min=130000,
+        salary_max=150000,
+        description="A cybersecurity saas role with jira and docker experience.",
+    )
+    mock_ai.return_value = [None]
+    mock_report.return_value = "reports/2026-02-19.md"
+    mock_dash.return_value = "reports/2026-02-19.html"
+
+    with patch("main.GreenhouseSource") as gs, \
+         patch("main.CrowdStrikeSource") as cs, \
+         patch("main.RemoteOKSource") as rs, \
+         patch("main.BuiltInSource") as bs, \
+         patch("main.WeWorkRemotelySource") as ws, \
+         patch("main.LinkedInAlertsSource") as ls:
+        gs.return_value.safe_collect.return_value = [job]
+        for mock_src in [cs, rs, bs, ws, ls]:
+            mock_src.return_value.safe_collect.return_value = []
+
+        from main import run_pipeline
+        result = run_pipeline()
+
+    assert len(result) == 1
+    assert result[0]["priority"] == "high"
+    assert result[0]["score"] >= 30

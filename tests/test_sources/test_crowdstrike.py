@@ -102,3 +102,89 @@ def test_api_error_returns_empty():
     source = CrowdStrikeSource()
     jobs = source.safe_collect()
     assert jobs == []
+
+
+# --- Additional edge cases ---
+
+
+@responses.activate
+def test_pagination_multiple_pages():
+    """total > 20 triggers additional page requests."""
+    page1 = {
+        "jobPostings": [
+            {"title": "Customer Success Manager", "externalPath": f"/job/csm-{i}",
+             "locationsText": "Remote", "postedOn": "Today"}
+            for i in range(20)
+        ],
+        "total": 25,
+    }
+    page2 = {
+        "jobPostings": [
+            {"title": "Customer Success Manager", "externalPath": f"/job/csm-{i}",
+             "locationsText": "Remote", "postedOn": "Today"}
+            for i in range(20, 25)
+        ],
+        "total": 25,
+    }
+    # Need responses for each query (up to 4) × each page
+    for _ in range(4):
+        responses.add(responses.POST, SEARCH_URL, json=page1, status=200)
+        responses.add(responses.POST, SEARCH_URL, json=page2, status=200)
+
+    source = CrowdStrikeSource()
+    jobs = source.collect()
+    # Should have fetched multiple pages for at least the first query
+    assert len(responses.calls) > 4
+
+
+@freeze_time("2026-02-19 12:00:00", tz_offset=0)
+def test_parse_posted_weeks_ago():
+    """'Posted 2 Weeks Ago' → 14 days back."""
+    source = CrowdStrikeSource()
+    result = source._parse_posted_on("Posted 2 Weeks Ago")
+    assert result.date() == datetime(2026, 2, 5).date()
+
+
+@freeze_time("2026-02-19 12:00:00", tz_offset=0)
+def test_parse_posted_months_ago():
+    """'Posted 1+ Months Ago' → ~30 days back."""
+    source = CrowdStrikeSource()
+    result = source._parse_posted_on("Posted 1 Months Ago")
+    expected = datetime(2026, 1, 20).date()
+    assert result.date() == expected
+
+
+@responses.activate
+def test_location_text_extraction():
+    """locationsText field mapped to job.location."""
+    data = {
+        "jobPostings": [
+            {"title": "Customer Success Manager", "externalPath": "/job/csm-loc",
+             "locationsText": "Remote, USA", "postedOn": "Today"}
+        ],
+        "total": 1,
+    }
+    for _ in range(4):
+        responses.add(responses.POST, SEARCH_URL, json=data, status=200)
+
+    source = CrowdStrikeSource()
+    jobs = source.collect()
+    assert jobs[0].location == "Remote, USA"
+
+
+@freeze_time("2026-02-19 12:00:00", tz_offset=0)
+def test_parse_posted_empty():
+    """Empty string → datetime.now()."""
+    source = CrowdStrikeSource()
+    result = source._parse_posted_on("")
+    assert result.date() == datetime(2026, 2, 19).date()
+
+
+@responses.activate
+def test_search_page_failure_returns_none():
+    """HTTP error on one search page → None, continues."""
+    responses.add(responses.POST, SEARCH_URL, status=500)
+
+    source = CrowdStrikeSource()
+    result = source._search_page("customer success", 0)
+    assert result is None

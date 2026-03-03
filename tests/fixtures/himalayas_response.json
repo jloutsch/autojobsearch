@@ -1,0 +1,48 @@
+{
+  "jobs": [
+    {
+      "title": "Customer Success Manager",
+      "companyName": "RemoteFirst",
+      "url": "https://himalayas.app/companies/remotefirst/jobs/customer-success-manager",
+      "slug": "customer-success-manager",
+      "companySlug": "remotefirst",
+      "categories": ["Customer Service"],
+      "salaryMin": 125000,
+      "salaryMax": 155000,
+      "salaryCurrency": "USD",
+      "locationRestrictions": "US, Canada",
+      "pubDate": "2026-02-18T12:00:00Z",
+      "description": "Drive customer outcomes for our cloud infrastructure platform."
+    },
+    {
+      "title": "Senior Data Scientist",
+      "companyName": "DataCo",
+      "url": "https://himalayas.app/companies/dataco/jobs/senior-data-scientist",
+      "slug": "senior-data-scientist",
+      "companySlug": "dataco",
+      "categories": ["Data Science"],
+      "salaryMin": null,
+      "salaryMax": null,
+      "salaryCurrency": null,
+      "locationRestrictions": "",
+      "pubDate": "2026-02-17T09:00:00Z",
+      "description": "Build ML models."
+    },
+    {
+      "title": "Application Support Engineer",
+      "companyName": "HealthTech",
+      "url": "",
+      "slug": "application-support-engineer",
+      "companySlug": "healthtech",
+      "categories": ["Support"],
+      "salaryMin": 110000,
+      "salaryMax": 135000,
+      "salaryCurrency": "USD",
+      "locationRestrictions": null,
+      "pubDate": "2026-02-16T15:00:00Z",
+      "description": "Provide application support for healthcare IT systems."
+    }
+  ],
+  "offset": 0,
+  "total": 3
+}

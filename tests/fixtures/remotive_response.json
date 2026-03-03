@@ -1,0 +1,39 @@
+{
+  "0-legal-notice": "Remotive API usage.",
+  "job-count": 3,
+  "jobs": [
+    {
+      "id": 3001,
+      "url": "https://remotive.com/remote-jobs/customer-support/customer-success-manager-3001",
+      "title": "Customer Success Manager",
+      "company_name": "CloudSecure",
+      "category": "Customer Service",
+      "publication_date": "2026-02-18T10:00:00",
+      "candidate_required_location": "USA Only",
+      "salary": "$120,000 - $150,000",
+      "description": "Lead customer success initiatives for our cybersecurity SaaS platform."
+    },
+    {
+      "id": 3002,
+      "url": "https://remotive.com/remote-jobs/software-dev/backend-engineer-3002",
+      "title": "Backend Engineer",
+      "company_name": "DevShop",
+      "category": "Software Development",
+      "publication_date": "2026-02-17T08:00:00",
+      "candidate_required_location": "Worldwide",
+      "salary": "",
+      "description": "Build backend microservices."
+    },
+    {
+      "id": 3003,
+      "url": "https://remotive.com/remote-jobs/customer-support/technical-account-management-lead-3003",
+      "title": "Technical Account Management Lead",
+      "company_name": "SaaSify",
+      "category": "Customer Service",
+      "publication_date": "2026-02-16T14:30:00",
+      "candidate_required_location": "",
+      "salary": "$130k - $160k",
+      "description": "Manage enterprise accounts and drive retention."
+    }
+  ]
+}
