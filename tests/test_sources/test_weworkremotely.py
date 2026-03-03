@@ -108,3 +108,102 @@ def test_date_parsing_rfc2822():
 
     if jobs:
         assert jobs[0].posted_date.year == 2026
+
+
+# --- Additional edge cases ---
+
+
+@responses.activate
+def test_title_without_colon():
+    """No ':' in title → whole string is title, company is empty."""
+    xml = """<?xml version="1.0" encoding="UTF-8"?>
+    <rss><channel>
+      <item>
+        <title>Customer Success Manager</title>
+        <link>https://weworkremotely.com/jobs/1</link>
+        <pubDate>Tue, 18 Feb 2026 10:00:00 +0000</pubDate>
+        <description>Great role.</description>
+      </item>
+    </channel></rss>"""
+    for url in FEED_URLS:
+        responses.add(responses.GET, url, body=xml, status=200)
+
+    source = WeWorkRemotelySource()
+    jobs = source.collect()
+    assert len(jobs) >= 1
+    assert jobs[0].company == ""
+    assert "Customer Success Manager" in jobs[0].title
+
+
+def test_extract_salary_single_value():
+    """'$130,000' single value without range."""
+    source = WeWorkRemotelySource()
+    # Pattern requires a range with dash; single value won't match range_match
+    assert source._extract_salary("Salary: $130,000 per year") == (0, 0)
+
+
+@responses.activate
+def test_xml_parse_error_returns_empty():
+    """Malformed XML → exception propagated (caught by safe_collect)."""
+    for url in FEED_URLS:
+        responses.add(responses.GET, url, body="not xml at all", status=200)
+
+    source = WeWorkRemotelySource()
+    # safe_collect catches the parse error
+    jobs = source.safe_collect()
+    assert jobs == []
+
+
+@responses.activate
+def test_description_html_cleaned():
+    """HTML tags stripped from description."""
+    xml = """<?xml version="1.0" encoding="UTF-8"?>
+    <rss><channel>
+      <item>
+        <title>SecureTech: Customer Success Manager</title>
+        <link>https://weworkremotely.com/jobs/2</link>
+        <pubDate>Tue, 18 Feb 2026 10:00:00 +0000</pubDate>
+        <description><![CDATA[<p>Looking for a <strong>CSM</strong> with experience.</p>]]></description>
+      </item>
+    </channel></rss>"""
+    for url in FEED_URLS:
+        responses.add(responses.GET, url, body=xml, status=200)
+
+    source = WeWorkRemotelySource()
+    jobs = source.collect()
+    assert len(jobs) >= 1
+    assert "<p>" not in jobs[0].description
+    assert "<strong>" not in jobs[0].description
+    assert "CSM" in jobs[0].description
+
+
+def test_date_parsing_empty():
+    """Empty date string → datetime.now()."""
+    source = WeWorkRemotelySource()
+    result = source._parse_date("")
+    assert result.year >= 2026
+
+
+def test_date_parsing_invalid():
+    """Invalid date → datetime.now() fallback."""
+    source = WeWorkRemotelySource()
+    result = source._parse_date("not-a-date")
+    assert result.year >= 2026
+
+
+@responses.activate
+def test_channel_missing_returns_empty():
+    """RSS with no <channel> → empty list."""
+    xml = '<?xml version="1.0" encoding="UTF-8"?><rss></rss>'
+    for url in FEED_URLS:
+        responses.add(responses.GET, url, body=xml, status=200)
+
+    source = WeWorkRemotelySource()
+    jobs = source.collect()
+    assert jobs == []
+
+
+def test_extract_salary_no_text():
+    """No salary info in text."""
+    source = WeWorkRemotelySource()
+    assert source._extract_salary("This is a great job with benefits.") == (0, 0)

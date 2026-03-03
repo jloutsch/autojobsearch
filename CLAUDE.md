@@ -37,6 +37,9 @@ Four-phase pipeline orchestrated by `main.py`:
 | BuiltIn | `sources/builtin.py` | HTML scraping | Selectors: `div[data-id="job-card"]`, `a[data-id="job-card-title"]`, `a[data-id="company-title"]` |
 | WeWorkRemotely | `sources/weworkremotely.py` | RSS/Atom XML | Title format is `Company: Job Title` — split on first colon |
 | LinkedIn | `sources/linkedin_alerts.py` | Google Alerts RSS | Requires manual one-time feed setup; only includes jobs from last 24 hours |
+| Remotive | `sources/remotive.py` | JSON API | `customer-support` category; max 2 req/min, all remote |
+| Himalayas | `sources/himalayas.py` | JSON API | Paginated (20/page, up to 5 pages); all remote |
+| Jobicy | `sources/jobicy.py` | JSON API | Two queries: `supporting` + `management` industries; all remote |
 
 **Not viable:** Indeed RSS (Cloudflare 403), Wellfound (Cloudflare + DataDome)
 

@@ -1,0 +1,40 @@
+{
+  "jobs": [
+    {
+      "id": 4001,
+      "url": "https://jobicy.com/jobs/4001-customer-success-manager",
+      "jobTitle": "Customer Success Manager",
+      "companyName": "SecureOps",
+      "jobIndustry": ["Supporting"],
+      "jobGeo": "United States",
+      "annualSalaryMin": 130000,
+      "annualSalaryMax": 160000,
+      "pubDate": "2026-02-18T11:00:00",
+      "jobExcerpt": "Own the customer lifecycle and drive expansion revenue in cybersecurity."
+    },
+    {
+      "id": 4002,
+      "url": "https://jobicy.com/jobs/4002-frontend-developer",
+      "jobTitle": "Frontend Developer",
+      "companyName": "WebCo",
+      "jobIndustry": ["IT"],
+      "jobGeo": "Worldwide",
+      "annualSalaryMin": null,
+      "annualSalaryMax": null,
+      "pubDate": "2026-02-17T10:00:00",
+      "jobExcerpt": "Build responsive web apps."
+    },
+    {
+      "id": 4003,
+      "url": "https://jobicy.com/jobs/4003-solutions-engineering-manager",
+      "jobTitle": "Solutions Engineering Manager",
+      "companyName": "CloudNet",
+      "jobIndustry": ["Management"],
+      "jobGeo": "",
+      "annualSalaryMin": 140000,
+      "annualSalaryMax": 175000,
+      "pubDate": "2026-02-16T09:30:00",
+      "jobExcerpt": "Lead a team of solutions engineers supporting enterprise customers."
+    }
+  ]
+}
