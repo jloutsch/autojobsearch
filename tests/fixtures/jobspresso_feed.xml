@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Jobspresso Jobs</title>
+    <item>
+      <title>Customer Success Manager</title>
+      <link>https://jobspresso.co/job/csm-securetech</link>
+      <pubDate>Tue, 18 Feb 2026 10:00:00 +0000</pubDate>
+      <dc:creator><![CDATA[SecureTech<br>&#9906;&nbsp;Remote, US]]></dc:creator>
+      <description>Looking for a CSM to manage enterprise accounts.</description>
+      <content:encoded><![CDATA[<p>Looking for a Customer Success Manager. Salary: $130,000 - $150,000 per year. Experience with SaaS and cybersecurity required.</p>]]></content:encoded>
+    </item>
+    <item>
+      <title>Senior Software Engineer</title>
+      <link>https://jobspresso.co/job/swe-devco</link>
+      <pubDate>Mon, 17 Feb 2026 08:00:00 +0000</pubDate>
+      <dc:creator><![CDATA[DevCo<br>&#9906;&nbsp;Anywhere]]></dc:creator>
+      <description>Full stack engineer needed.</description>
+      <content:encoded><![CDATA[<p>Looking for a full stack engineer with React and Node experience.</p>]]></content:encoded>
+    </item>
+    <item>
+      <title>Application Support Lead</title>
+      <link>https://jobspresso.co/job/asl-cloudops</link>
+      <pubDate>Sun, 16 Feb 2026 14:00:00 +0000</pubDate>
+      <dc:creator><![CDATA[CloudOps Inc]]></dc:creator>
+      <description>Support lead for cloud infrastructure.</description>
+      <content:encoded><![CDATA[<p>Application Support Lead needed. $120k-$140k. Cloud infrastructure experience preferred.</p>]]></content:encoded>
+    </item>
+  </channel>
+</rss>
