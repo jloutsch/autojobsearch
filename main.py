@@ -17,10 +17,13 @@ from sources.crowdstrike import CrowdStrikeSource
 from sources.greenhouse import GreenhouseSource
 from sources.himalayas import HimalayasSource
 from sources.jobicy import JobicySource
+from sources.jobspresso import JobspressoSource
 from sources.linkedin_alerts import LinkedInAlertsSource
 from sources.remoteok import RemoteOKSource
 from sources.remotive import RemotiveSource
 from sources.weworkremotely import WeWorkRemotelySource
+from sources.workatastartup import WorkAtAStartupSource
+from sources.workingnomads import WorkingNomadsSource
 
 logging.basicConfig(
     level=logging.INFO,
@@ -50,6 +53,9 @@ def run_pipeline():
         RemotiveSource(),
         HimalayasSource(),
         JobicySource(),
+        JobspressoSource(),
+        WorkingNomadsSource(),
+        WorkAtAStartupSource(),
     ]
 
     raw_jobs = []

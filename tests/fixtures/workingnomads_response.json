@@ -1,0 +1,42 @@
+[
+  {
+    "url": "https://www.workingnomads.com/jobs/customer-success-saasco",
+    "title": "Customer Success Manager",
+    "description": "<p>We need a CSM with <strong>SaaS</strong> experience. Great benefits and remote work.</p>",
+    "company_name": "SaaSCo",
+    "category_name": "Customer Success",
+    "tags": "saas,customer-success,remote",
+    "location": "Remote, Worldwide",
+    "pub_date": "2026-02-15T09:41:38.869628-05:00"
+  },
+  {
+    "url": "https://www.workingnomads.com/jobs/backend-dev-techcorp",
+    "title": "Backend Developer",
+    "description": "<p>Python and Django developer needed.</p>",
+    "company_name": "TechCorp",
+    "category_name": "Development",
+    "tags": "python,django,backend",
+    "location": "Remote",
+    "pub_date": "2026-02-14T12:00:00-05:00"
+  },
+  {
+    "url": "https://www.workingnomads.com/jobs/sales-manager-growthio",
+    "title": "Sales Manager",
+    "description": "<p>Enterprise sales manager for B2B SaaS.</p>",
+    "company_name": "GrowthIO",
+    "category_name": "Sales",
+    "tags": "sales,b2b,saas",
+    "location": "US Only",
+    "pub_date": "2026-02-13T08:30:00-05:00"
+  },
+  {
+    "url": "https://www.workingnomads.com/jobs/application-support-analyst",
+    "title": "Application Support Analyst",
+    "description": "<p>Provide tier 2 application support for enterprise clients.</p>",
+    "company_name": "EnterpriseApp",
+    "category_name": "Administration",
+    "tags": "support,enterprise,technical",
+    "location": "Remote, US",
+    "pub_date": "2026-02-12T10:00:00.123456-05:00"
+  }
+]
