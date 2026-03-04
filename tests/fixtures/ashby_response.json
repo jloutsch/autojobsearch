@@ -1,0 +1,44 @@
+{
+  "jobs": [
+    {
+      "title": "Customer Success Manager",
+      "location": "Remote - US",
+      "isRemote": true,
+      "employmentType": "FullTime",
+      "publishedAt": "2026-02-18T10:00:00Z",
+      "jobUrl": "https://jobs.ashbyhq.com/ramp/customer-success-manager",
+      "descriptionPlain": "Join Ramp as a Customer Success Manager. You will manage enterprise accounts and drive adoption.",
+      "descriptionHtml": "<p>Join Ramp as a Customer Success Manager. You will manage enterprise accounts and drive adoption.</p>"
+    },
+    {
+      "title": "Senior Software Engineer",
+      "location": "New York, NY",
+      "isRemote": false,
+      "employmentType": "FullTime",
+      "publishedAt": "2026-02-17T10:00:00Z",
+      "jobUrl": "https://jobs.ashbyhq.com/ramp/senior-software-engineer",
+      "descriptionPlain": "Build financial products at scale.",
+      "descriptionHtml": "<p>Build financial products at scale.</p>"
+    },
+    {
+      "title": "Technical Account Management Director",
+      "location": "San Francisco, CA",
+      "isRemote": null,
+      "employmentType": "FullTime",
+      "publishedAt": "2026-02-16T08:00:00Z",
+      "jobUrl": "https://jobs.ashbyhq.com/ramp/tam-director",
+      "descriptionPlain": "Lead our TAM team across the west coast.",
+      "descriptionHtml": "<p>Lead our TAM team across the west coast.</p>"
+    },
+    {
+      "title": "Application Support Lead",
+      "location": "Remote",
+      "isRemote": true,
+      "employmentType": "FullTime",
+      "publishedAt": "2026-02-15T12:00:00Z",
+      "jobUrl": "https://jobs.ashbyhq.com/ramp/application-support-lead",
+      "descriptionPlain": "Manage our application support team.",
+      "descriptionHtml": "<p>Manage our application support team.</p>"
+    }
+  ]
+}

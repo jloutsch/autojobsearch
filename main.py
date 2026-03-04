@@ -22,6 +22,8 @@ from sources.linkedin_alerts import LinkedInAlertsSource
 from sources.remoteok import RemoteOKSource
 from sources.remotive import RemotiveSource
 from sources.weworkremotely import WeWorkRemotelySource
+from sources.ashby import AshbySource
+from sources.themuse import TheMuseSource
 from sources.workatastartup import WorkAtAStartupSource
 from sources.workingnomads import WorkingNomadsSource
 
@@ -56,6 +58,8 @@ def run_pipeline():
         JobspressoSource(),
         WorkingNomadsSource(),
         WorkAtAStartupSource(),
+        TheMuseSource(),
+        AshbySource(),
     ]
 
     raw_jobs = []

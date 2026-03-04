@@ -1,0 +1,24 @@
+{
+  "page": 1,
+  "page_count": 2,
+  "total": 4,
+  "results": [
+    {
+      "name": "Application Support Specialist",
+      "company": {
+        "name": "HealthTech Inc"
+      },
+      "refs": {
+        "landing_page": "https://www.themuse.com/jobs/healthtech/application-support-specialist"
+      },
+      "contents": "<p>Support our healthcare platform.</p>",
+      "locations": [
+        {"name": "Flexible / Remote"}
+      ],
+      "levels": [
+        {"name": "Mid"}
+      ],
+      "publication_date": "2026-02-15T12:00:00Z"
+    }
+  ]
+}
