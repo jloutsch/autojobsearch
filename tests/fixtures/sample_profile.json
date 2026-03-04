@@ -45,5 +45,6 @@
     "SentinelOne": "sentinellabs",
     "Datadog": "datadog"
   },
+  "ashby_boards": {},
   "ai_prompt_template": ""
 }

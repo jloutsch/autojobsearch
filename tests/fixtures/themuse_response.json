@@ -1,0 +1,59 @@
+{
+  "page": 0,
+  "page_count": 2,
+  "total": 3,
+  "results": [
+    {
+      "name": "Customer Success Manager",
+      "company": {
+        "name": "Acme Corp"
+      },
+      "refs": {
+        "landing_page": "https://www.themuse.com/jobs/acmecorp/customer-success-manager"
+      },
+      "contents": "<p>We're looking for a Customer Success Manager to join our team. Salary range: $130,000 - $150,000 per year.</p>",
+      "locations": [
+        {"name": "Flexible / Remote"}
+      ],
+      "levels": [
+        {"name": "Senior"}
+      ],
+      "publication_date": "2026-02-18T10:00:00Z"
+    },
+    {
+      "name": "Senior Software Engineer",
+      "company": {
+        "name": "TechCo"
+      },
+      "refs": {
+        "landing_page": "https://www.themuse.com/jobs/techco/senior-software-engineer"
+      },
+      "contents": "<p>Build amazing software.</p>",
+      "locations": [
+        {"name": "New York, NY"}
+      ],
+      "levels": [
+        {"name": "Senior"}
+      ],
+      "publication_date": "2026-02-17T10:00:00Z"
+    },
+    {
+      "name": "Technical Account Management Lead",
+      "company": {
+        "name": "CloudCo"
+      },
+      "refs": {
+        "landing_page": "https://www.themuse.com/jobs/cloudco/technical-account-management-lead"
+      },
+      "contents": "<p>Lead our TAM team. Compensation: $140k-$170k.</p>",
+      "locations": [
+        {"name": "Remote"},
+        {"name": "San Francisco, CA"}
+      ],
+      "levels": [
+        {"name": "Mid-Senior"}
+      ],
+      "publication_date": "2026-02-16T08:00:00Z"
+    }
+  ]
+}

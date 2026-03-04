@@ -7,7 +7,7 @@ def _load():
     """Load all config values from the current profile."""
     global SEARCH_QUERIES, PRIORITY_COMPANIES, INDUSTRIES
     global SALARY_MIN, SALARY_MAX, SALARY_FLOOR
-    global GREENHOUSE_BOARDS, ROLE_KEYWORDS
+    global GREENHOUSE_BOARDS, ASHBY_BOARDS, ROLE_KEYWORDS
     global MAX_JOB_AGE_DAYS
 
     _p = get_profile()
@@ -18,6 +18,7 @@ def _load():
     SALARY_MAX = _p["salary_range"]["max"]
     SALARY_FLOOR = _p["salary_range"].get("floor", 100000)
     GREENHOUSE_BOARDS = _p.get("greenhouse_boards", {})
+    ASHBY_BOARDS = _p.get("ashby_boards", {})
     ROLE_KEYWORDS = [tag.lower() for tag in _p["role_tags"]]
     MAX_JOB_AGE_DAYS = _p.get("max_job_age_days", 30)
 
