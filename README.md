@@ -6,7 +6,7 @@ Job search pipeline that discovers, scores, and delivers relevant job listings. 
 
 ## Features
 
-- **Multi-source scraping** — Pulls listings from Greenhouse ATS boards, CrowdStrike (Workday), RemoteOK, BuiltIn, WeWorkRemotely, and LinkedIn via Google Alerts RSS
+- **Multi-source scraping** — Pulls listings from 14 job boards including Greenhouse ATS, CrowdStrike (Workday), RemoteOK, BuiltIn, WeWorkRemotely, LinkedIn (Google Alerts RSS), Remotive, Himalayas, Jobicy, Jobspresso, Working Nomads, YC Work at a Startup, The Muse, and Ashby ATS
 - **Smart filtering** — Filters by role keywords, location (US-wide remote or preferred city), salary floor, job age, and rejects junior/intern roles
 - **Two-tier scoring** — Rule-based scoring (0-50 pts) on title match, company priority, industry keywords, salary, and skills alignment. Optional AI scoring (0-50 pts) via a local Ollama model for fit analysis
 - **Resume-powered profile** — Upload a PDF/DOCX resume or paste resume text to auto-populate your search profile using AI
@@ -147,7 +147,7 @@ Changes are saved to your browser's local storage and to `profile.json` on the s
 
 ## Job Sources
 
-The pipeline searches six different job boards and aggregates the results. All sources are queried using your profile's role tags as search keywords.
+The pipeline searches 14 different job boards and aggregates the results. All sources are queried using your profile's role tags as search keywords.
 
 | Source | How it works | What it covers |
 |--------|-------------|----------------|
@@ -157,8 +157,16 @@ The pipeline searches six different job boards and aggregates the results. All s
 | **BuiltIn** | Scrapes search result pages from `builtin.com`. Parses job cards for title, company, salary, and location. | US tech jobs across thousands of companies. Supports salary extraction in multiple formats. |
 | **WeWorkRemotely** | Parses the RSS/XML feeds from `weworkremotely.com`. Titles arrive as `Company: Job Title`. | Remote jobs across programming, design, customer support, and more. |
 | **LinkedIn (via Google Alerts)** | Reads Google Alerts RSS feeds configured to monitor LinkedIn job postings. Only includes entries from the last 24 hours. | Any LinkedIn job matching your alert keywords. Requires one-time manual setup (see [Adding LinkedIn alerts](#adding-linkedin-alerts)). |
+| **Remotive** | Fetches the public JSON API filtered to `customer-support` category. Max 2 requests per minute. | Remote-only positions. All listings are tagged as remote. |
+| **Himalayas** | Paginated JSON API (20 results/page, up to 5 pages). | Remote jobs with detailed company profiles and salary data. |
+| **Jobicy** | JSON API queried with two industry filters: `supporting` and `management`. | Remote jobs across support and management roles. |
+| **Jobspresso** | Parses RSS 2.0 feeds with keyword search. Company and location extracted from `dc:creator` field. | Curated remote jobs across tech, marketing, and customer success. |
+| **Working Nomads** | Fetches a bare JSON array API. Filters by category (Customer Success, Sales, Administration, Management). | Small but focused remote job board (~29 total listings). |
+| **YC Work at a Startup** | Scrapes SSR HTML from Y Combinator's job board with `?role=support` and `?role=sales` params. Strips YC batch suffixes from company names. | Jobs at YC-backed startups. |
+| **The Muse** | Paginated JSON API filtered to `Account Management` category and `Flexible / Remote` location. 20 results per page. Salary extracted via regex from HTML description. | Remote account management and customer success roles across many companies. |
+| **Ashby ATS** | Queries per-company job board APIs (JSON), same pattern as Greenhouse. No authentication required. | Add any company that uses Ashby by finding their board slug from their careers URL (e.g., `jobs.ashbyhq.com/ramp` → slug is `ramp`). Configure boards in `profile.json` under `ashby_boards`. |
 
-Sources that were evaluated but aren't viable: **Indeed** (Cloudflare 403 blocks API access) and **Wellfound** (Cloudflare + DataDome anti-bot protection).
+Sources that were evaluated but aren't viable: **Indeed** (Cloudflare 403), **Wellfound** (Cloudflare + DataDome), **Support Driven** (Cloudflare JS challenge), **Remoters.net** (JS-loaded, no API).
 
 Each source module extends `BaseSource` with a `collect()` method that returns standardized `JobListing` objects. The `safe_collect()` wrapper catches exceptions so one source failure never kills the pipeline — the remaining sources still run.
 
@@ -218,6 +226,9 @@ All search parameters are in `profile.json`. The example file (`profile.example.
   },
   "greenhouse_boards": {
     "CompanyName": "board-token"
+  },
+  "ashby_boards": {
+    "CompanyName": "board-slug"
   }
 }
 ```
@@ -225,6 +236,10 @@ All search parameters are in `profile.json`. The example file (`profile.example.
 ### Adding Greenhouse boards
 
 Find a company's Greenhouse board token from their careers page URL (e.g., `https://boards.greenhouse.io/sentinellabs` → token is `sentinellabs`). Add it to the `greenhouse_boards` object in your profile.
+
+### Adding Ashby boards
+
+Find a company's Ashby board slug from their careers page URL (e.g., `https://jobs.ashbyhq.com/ramp` → slug is `ramp`). Add it to the `ashby_boards` object in your profile.
 
 ### Adding LinkedIn alerts
 
@@ -247,6 +262,14 @@ sources/
   builtin.py               # BuiltIn HTML scraping
   weworkremotely.py        # WeWorkRemotely RSS/XML
   linkedin_alerts.py       # LinkedIn via Google Alerts RSS
+  remotive.py              # Remotive JSON API
+  himalayas.py             # Himalayas paginated JSON API
+  jobicy.py                # Jobicy JSON API
+  jobspresso.py            # Jobspresso RSS 2.0 with dc:creator
+  workingnomads.py         # Working Nomads JSON API
+  workatastartup.py        # YC Work at a Startup HTML scraping
+  themuse.py               # The Muse paginated JSON API
+  ashby.py                 # Ashby ATS per-company JSON API
 
 filters.py                 # Location, role, salary, age filters
 dedup.py                   # Cross-source + historical deduplication

@@ -43,6 +43,8 @@ Four-phase pipeline orchestrated by `main.py`:
 | Jobspresso | `sources/jobspresso.py` | RSS 2.0 XML | `s=` keyword search; company/location in `dc:creator`; all remote |
 | Working Nomads | `sources/workingnomads.py` | JSON API | Bare array; `category_name` filtering; ~29 total jobs; all remote |
 | YC Work at a Startup | `sources/workatastartup.py` | HTML scraping | `?role=support` + `?role=sales` params; strip YC batch from company |
+| The Muse | `sources/themuse.py` | JSON API | `Account Management` category; paginated (20/page); salary from HTML |
+| Ashby ATS | `sources/ashby.py` | JSON API | Per-company boards like Greenhouse; `isRemote` field; configure slugs in `profile.json` |
 
 **Not viable:** Indeed RSS (Cloudflare 403), Wellfound (Cloudflare + DataDome), Support Driven (Cloudflare JS challenge), Remoters.net (JS-loaded, no API)
 
@@ -56,7 +58,7 @@ Scores the top 15 rule-based results with fit analysis against the resume summar
 
 ## Key Configuration
 
-- `config.py` — Search queries, priority companies, industries, salary range, Greenhouse board tokens, role keywords (all loaded from `profile.json`)
+- `config.py` — Search queries, priority companies, industries, salary range, Greenhouse/Ashby board tokens, role keywords (all loaded from `profile.json`)
 - `models.py` — `JobListing` dataclass shared across all modules
 - `sources/linkedin_alerts.py:ALERT_FEED_URLS` — Google Alerts RSS feed URLs (must be added after manual creation)
 
