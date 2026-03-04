@@ -405,3 +405,289 @@ def test_put_profile_oversized_template(dashboard_server):
         timeout=5,
     )
     assert resp.status_code == 400
+
+
+# --- POST /api/parse-resume endpoint tests ---
+
+
+@pytest.fixture
+def resume_server(tmp_path, monkeypatch):
+    """Start a handler server that supports POST /api/parse-resume."""
+    import base64
+    import http.server
+
+    from dashboard import generate_landing_page
+
+    reports_dir = str(tmp_path / "reports")
+    generate_landing_page(output_dir=reports_dir)
+
+    class ResumeTestHandler(http.server.SimpleHTTPRequestHandler):
+        protocol_version = "HTTP/1.1"
+        _MAX_BODY = 1 * 1024 * 1024
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, directory=reports_dir, **kwargs)
+
+        def end_headers(self):
+            self.send_header("Cache-Control", "no-store")
+            super().end_headers()
+
+        def do_POST(self):
+            if self.path == "/api/parse-resume":
+                self._handle_parse_resume()
+            else:
+                self.send_error(404)
+
+        def _handle_parse_resume(self):
+            MAX_UPLOAD = 15 * 1024 * 1024
+            length = int(self.headers.get("Content-Length", 0))
+            if length > MAX_UPLOAD:
+                self.send_error(413, "Request body too large")
+                return
+            if not length:
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", "27")
+                self.end_headers()
+                self.wfile.write(b'{"error":"No request body"}')
+                return
+
+            body = self.rfile.read(length)
+
+            try:
+                data = json.loads(body)
+            except json.JSONDecodeError:
+                resp = b'{"error":"Invalid JSON"}'
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(resp)))
+                self.end_headers()
+                self.wfile.write(resp)
+                return
+
+            file_data = data.get("file")
+            filename = data.get("filename", "resume.pdf")
+
+            if not file_data:
+                resp = b'{"error":"Missing file field"}'
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(resp)))
+                self.end_headers()
+                self.wfile.write(resp)
+                return
+
+            import os as _os
+            ext = _os.path.splitext(filename)[1].lower()
+            if ext not in (".pdf", ".doc", ".docx"):
+                resp = b'{"error":"Unsupported file type. Upload a PDF or DOCX."}'
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(resp)))
+                self.end_headers()
+                self.wfile.write(resp)
+                return
+
+            try:
+                if "," in file_data and file_data.startswith("data:"):
+                    file_data = file_data.split(",", 1)[1]
+                file_bytes = base64.b64decode(file_data)
+            except Exception:
+                resp = b'{"error":"Invalid base64 data"}'
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(resp)))
+                self.end_headers()
+                self.wfile.write(resp)
+                return
+
+            if len(file_bytes) > 10 * 1024 * 1024:
+                resp = b'{"error":"File too large (max 10 MB)"}'
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(resp)))
+                self.end_headers()
+                self.wfile.write(resp)
+                return
+
+            # Stream NDJSON response
+            self.send_response(200)
+            self.send_header("Content-Type", "application/x-ndjson")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "close")
+            self.end_headers()
+
+            from resume_parser import parse_resume
+
+            try:
+                def _send_progress(message):
+                    import json as _json
+                    line = _json.dumps({"type": "progress", "message": message}) + "\n"
+                    try:
+                        self.wfile.write(line.encode())
+                        self.wfile.flush()
+                    except (BrokenPipeError, ConnectionResetError):
+                        pass
+
+                result = parse_resume(
+                    file_bytes, filename, progress_callback=_send_progress
+                )
+                line = json.dumps({"type": "result", "profile": result}) + "\n"
+                self.wfile.write(line.encode())
+                self.wfile.flush()
+            except ValueError as e:
+                line = json.dumps({"type": "error", "error": str(e)}) + "\n"
+                self.wfile.write(line.encode())
+                self.wfile.flush()
+            except Exception:
+                line = json.dumps({"type": "error", "error": "Resume parsing failed"}) + "\n"
+                self.wfile.write(line.encode())
+                self.wfile.flush()
+
+        def log_message(self, format, *args):
+            pass
+
+    server = HTTPServer(("localhost", 0), ResumeTestHandler)
+    port = server.server_address[1]
+    thread = threading.Thread(target=server.serve_forever)
+    thread.daemon = True
+    thread.start()
+
+    yield f"http://localhost:{port}"
+
+    server.shutdown()
+
+
+MOCK_PARSE_RESULT = {
+    "role_tags": ["customer success", "account management"],
+    "industry_tags": ["saas", "cybersecurity"],
+    "skills": ["python", "jira", "sql"],
+    "primary_role_tags": ["Customer Success Manager"],
+    "secondary_role_tags": ["Solutions Engineer"],
+    "resume_summary": "Experienced CSM with 10+ years in SaaS.",
+}
+
+
+def test_resume_upload_valid_pdf(resume_server):
+    """POST valid PDF returns 200 with NDJSON streaming result."""
+    import base64
+
+    fake_pdf = base64.b64encode(b"%PDF-1.4 fake content").decode()
+    with patch("resume_parser.parse_resume", return_value=MOCK_PARSE_RESULT):
+        resp = requests.post(
+            f"{resume_server}/api/parse-resume",
+            json={"file": fake_pdf, "filename": "resume.pdf"},
+            timeout=10,
+        )
+    assert resp.status_code == 200
+    assert resp.headers["Content-Type"] == "application/x-ndjson"
+    # Parse NDJSON lines — last line should be the result
+    lines = [json.loads(line) for line in resp.text.strip().split("\n") if line.strip()]
+    result_lines = [l for l in lines if l["type"] == "result"]
+    assert len(result_lines) == 1
+    profile = result_lines[0]["profile"]
+    assert profile["role_tags"] == ["customer success", "account management"]
+    assert profile["skills"] == ["python", "jira", "sql"]
+
+
+def test_resume_upload_invalid_extension(resume_server):
+    """POST a .txt file returns 400."""
+    import base64
+
+    fake_file = base64.b64encode(b"plain text content").decode()
+    resp = requests.post(
+        f"{resume_server}/api/parse-resume",
+        json={"file": fake_file, "filename": "resume.txt"},
+        timeout=5,
+    )
+    assert resp.status_code == 400
+    assert "Unsupported file type" in resp.json()["error"]
+
+
+def test_resume_upload_missing_file_field(resume_server):
+    """POST without file field returns 400."""
+    resp = requests.post(
+        f"{resume_server}/api/parse-resume",
+        json={"filename": "resume.pdf"},
+        timeout=5,
+    )
+    assert resp.status_code == 400
+    assert "Missing file field" in resp.json()["error"]
+
+
+def test_resume_upload_empty_body(resume_server):
+    """POST with no body returns 400."""
+    resp = requests.post(
+        f"{resume_server}/api/parse-resume",
+        data=b"",
+        headers={"Content-Length": "0"},
+        timeout=5,
+    )
+    assert resp.status_code == 400
+
+
+def test_resume_upload_invalid_json(resume_server):
+    """POST non-JSON body returns 400."""
+    resp = requests.post(
+        f"{resume_server}/api/parse-resume",
+        data=b"not valid json {{{",
+        headers={"Content-Type": "application/json"},
+        timeout=5,
+    )
+    assert resp.status_code == 400
+    assert "Invalid JSON" in resp.json()["error"]
+
+
+def test_resume_upload_oversized(resume_server):
+    """POST file >10MB after decode returns 400."""
+    import base64
+
+    # Create base64 data that decodes to >10MB
+    big_content = b"X" * (10 * 1024 * 1024 + 1)
+    big_b64 = base64.b64encode(big_content).decode()
+    with patch("resume_parser.parse_resume", return_value=MOCK_PARSE_RESULT):
+        resp = requests.post(
+            f"{resume_server}/api/parse-resume",
+            json={"file": big_b64, "filename": "resume.pdf"},
+            timeout=10,
+        )
+    assert resp.status_code == 400
+    assert "too large" in resp.json()["error"]
+
+
+def test_resume_upload_data_url_prefix(resume_server):
+    """POST with data:application/pdf;base64,... prefix is handled."""
+    import base64
+
+    fake_pdf = base64.b64encode(b"%PDF-1.4 fake content").decode()
+    data_url = f"data:application/pdf;base64,{fake_pdf}"
+    with patch("resume_parser.parse_resume", return_value=MOCK_PARSE_RESULT):
+        resp = requests.post(
+            f"{resume_server}/api/parse-resume",
+            json={"file": data_url, "filename": "resume.pdf"},
+            timeout=10,
+        )
+    assert resp.status_code == 200
+    lines = [json.loads(line) for line in resp.text.strip().split("\n") if line.strip()]
+    result_lines = [l for l in lines if l["type"] == "result"]
+    assert len(result_lines) == 1
+    assert "role_tags" in result_lines[0]["profile"]
+
+
+def test_resume_upload_parse_error(resume_server):
+    """parse_resume raising ValueError returns error in NDJSON stream."""
+    import base64
+
+    fake_pdf = base64.b64encode(b"%PDF-1.4 fake").decode()
+    with patch("resume_parser.parse_resume", side_effect=ValueError("Could not extract text")):
+        resp = requests.post(
+            f"{resume_server}/api/parse-resume",
+            json={"file": fake_pdf, "filename": "resume.pdf"},
+            timeout=10,
+        )
+    assert resp.status_code == 200  # NDJSON stream started before error
+    lines = [json.loads(line) for line in resp.text.strip().split("\n") if line.strip()]
+    error_lines = [l for l in lines if l["type"] == "error"]
+    assert len(error_lines) == 1
+    assert "Could not extract text" in error_lines[0]["error"]
