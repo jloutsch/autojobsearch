@@ -1,5 +1,6 @@
 import logging
 import re
+import xml.etree.ElementTree as _ET_types
 import defusedxml.ElementTree as ET
 from datetime import datetime
 from email.utils import parsedate_to_datetime
@@ -52,7 +53,7 @@ class WeWorkRemotelySource(BaseSource):
 
         return jobs
 
-    def _parse_item(self, item: ET.Element) -> JobListing | None:
+    def _parse_item(self, item: _ET_types.Element) -> JobListing | None:
         raw_title = item.findtext("title", "")
 
         # Title format is "Company: Job Title"

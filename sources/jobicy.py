@@ -11,11 +11,6 @@ logger = logging.getLogger(__name__)
 
 API_URL = "https://jobicy.com/api/v2/remote-jobs"
 
-QUERIES = [
-    {"count": 50, "industry": "supporting", "tag": "customer success"},
-    {"count": 50, "industry": "management", "tag": "account manager"},
-]
-
 
 class JobicySource(BaseSource):
     name = "jobicy"
@@ -24,14 +19,19 @@ class JobicySource(BaseSource):
         jobs = []
         seen_urls = set()
 
-        for params in QUERIES:
-            resp = requests.get(
-                API_URL,
-                params=params,
-                headers={"User-Agent": "AutoJobSearch/1.0"},
-                timeout=30,
-            )
-            resp.raise_for_status()
+        for tag in config.SEARCH_QUERIES:
+            params = {"count": 50, "tag": tag}
+            try:
+                resp = requests.get(
+                    API_URL,
+                    params=params,
+                    headers={"User-Agent": "AutoJobSearch/1.0"},
+                    timeout=30,
+                )
+                resp.raise_for_status()
+            except requests.RequestException as e:
+                logger.warning(f"[jobicy] Failed to fetch tag '{tag}': {e}")
+                continue
             data = resp.json()
 
             listings = data.get("jobs", [])

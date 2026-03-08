@@ -19,15 +19,27 @@ class HimalayasSource(BaseSource):
 
     def collect(self) -> list[JobListing]:
         jobs = []
+        seen_urls = set()
+
+        for query in config.SEARCH_QUERIES:
+            self._fetch_query(query, jobs, seen_urls)
+
+        return jobs
+
+    def _fetch_query(self, query: str, jobs: list, seen_urls: set) -> None:
         for page in range(MAX_PAGES):
             offset = page * PAGE_SIZE
-            resp = requests.get(
-                API_URL,
-                params={"limit": PAGE_SIZE, "offset": offset},
-                headers={"User-Agent": "AutoJobSearch/1.0"},
-                timeout=30,
-            )
-            resp.raise_for_status()
+            try:
+                resp = requests.get(
+                    API_URL,
+                    params={"limit": PAGE_SIZE, "offset": offset, "q": query},
+                    headers={"User-Agent": "AutoJobSearch/1.0"},
+                    timeout=30,
+                )
+                resp.raise_for_status()
+            except requests.RequestException as e:
+                logger.warning(f"[himalayas] Failed to fetch query '{query}': {e}")
+                break
             data = resp.json()
 
             listings = data.get("jobs", [])
@@ -50,6 +62,10 @@ class HimalayasSource(BaseSource):
                     if slug and company_slug:
                         url = f"https://himalayas.app/companies/{company_slug}/jobs/{slug}"
 
+                if url in seen_urls:
+                    continue
+                seen_urls.add(url)
+
                 job = JobListing(
                     title=title,
                     company=item.get("companyName", ""),
@@ -64,8 +80,6 @@ class HimalayasSource(BaseSource):
                     raw_data=item,
                 )
                 jobs.append(job)
-
-        return jobs
 
     def _matches_role(self, title: str) -> bool:
         title_lower = title.lower()
