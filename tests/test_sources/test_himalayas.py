@@ -1,18 +1,29 @@
 """Tests for sources/himalayas.py — Himalayas JSON API source."""
 
+from unittest.mock import patch
+
 import responses
 
 from sources.himalayas import HimalayasSource, API_URL, PAGE_SIZE
 from tests.conftest import load_fixture
 
+# Use a single query to simplify test response setup
+MOCK_QUERIES = ["customer success"]
+
+
+def _add_responses_for_query(fixture, empty_page=True):
+    """Add fixture response + optional empty page for one query."""
+    responses.add(responses.GET, API_URL, json=fixture, status=200)
+    if empty_page:
+        responses.add(responses.GET, API_URL, json={"jobs": []}, status=200)
+
 
 @responses.activate
+@patch("sources.himalayas.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_collect_filters_by_role():
     """Only role-matching titles are returned."""
     fixture = load_fixture("himalayas_response.json")
-    responses.add(responses.GET, API_URL, json=fixture, status=200)
-    # Empty second page to stop pagination
-    responses.add(responses.GET, API_URL, json={"jobs": []}, status=200)
+    _add_responses_for_query(fixture)
 
     source = HimalayasSource()
     jobs = source.collect()
@@ -24,11 +35,11 @@ def test_collect_filters_by_role():
 
 
 @responses.activate
+@patch("sources.himalayas.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_source_name():
     """All returned jobs have source='himalayas'."""
     fixture = load_fixture("himalayas_response.json")
-    responses.add(responses.GET, API_URL, json=fixture, status=200)
-    responses.add(responses.GET, API_URL, json={"jobs": []}, status=200)
+    _add_responses_for_query(fixture)
 
     source = HimalayasSource()
     jobs = source.collect()
@@ -37,11 +48,11 @@ def test_source_name():
 
 
 @responses.activate
+@patch("sources.himalayas.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_salary_parsing():
     """Salary min/max extracted from integer fields."""
     fixture = load_fixture("himalayas_response.json")
-    responses.add(responses.GET, API_URL, json=fixture, status=200)
-    responses.add(responses.GET, API_URL, json={"jobs": []}, status=200)
+    _add_responses_for_query(fixture)
 
     source = HimalayasSource()
     jobs = source.collect()
@@ -52,26 +63,25 @@ def test_salary_parsing():
 
 
 @responses.activate
+@patch("sources.himalayas.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_null_salary():
     """Null salary fields become 0."""
     fixture = load_fixture("himalayas_response.json")
-    responses.add(responses.GET, API_URL, json=fixture, status=200)
-    responses.add(responses.GET, API_URL, json={"jobs": []}, status=200)
+    _add_responses_for_query(fixture)
 
     source = HimalayasSource()
     jobs = source.collect()
 
-    # Application Support Engineer has salary values
     app_support = next(j for j in jobs if j.title == "Application Support Engineer")
     assert app_support.salary_min == 110000
 
 
 @responses.activate
+@patch("sources.himalayas.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_url_fallback_from_slugs():
     """When url is empty, constructs URL from company/job slugs."""
     fixture = load_fixture("himalayas_response.json")
-    responses.add(responses.GET, API_URL, json=fixture, status=200)
-    responses.add(responses.GET, API_URL, json={"jobs": []}, status=200)
+    _add_responses_for_query(fixture)
 
     source = HimalayasSource()
     jobs = source.collect()
@@ -81,11 +91,11 @@ def test_url_fallback_from_slugs():
 
 
 @responses.activate
+@patch("sources.himalayas.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_all_remote():
     """Every returned job has is_remote=True."""
     fixture = load_fixture("himalayas_response.json")
-    responses.add(responses.GET, API_URL, json=fixture, status=200)
-    responses.add(responses.GET, API_URL, json={"jobs": []}, status=200)
+    _add_responses_for_query(fixture)
 
     source = HimalayasSource()
     jobs = source.collect()
@@ -94,11 +104,11 @@ def test_all_remote():
 
 
 @responses.activate
+@patch("sources.himalayas.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_location_null_defaults_to_worldwide():
     """Null locationRestrictions defaults to 'Worldwide'."""
     fixture = load_fixture("himalayas_response.json")
-    responses.add(responses.GET, API_URL, json=fixture, status=200)
-    responses.add(responses.GET, API_URL, json={"jobs": []}, status=200)
+    _add_responses_for_query(fixture)
 
     source = HimalayasSource()
     jobs = source.collect()
@@ -108,11 +118,11 @@ def test_location_null_defaults_to_worldwide():
 
 
 @responses.activate
+@patch("sources.himalayas.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_date_parsing():
     """ISO date with Z suffix parsed correctly."""
     fixture = load_fixture("himalayas_response.json")
-    responses.add(responses.GET, API_URL, json=fixture, status=200)
-    responses.add(responses.GET, API_URL, json={"jobs": []}, status=200)
+    _add_responses_for_query(fixture)
 
     source = HimalayasSource()
     jobs = source.collect()
@@ -130,11 +140,11 @@ def test_date_parsing_empty():
 
 
 @responses.activate
+@patch("sources.himalayas.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_pagination_stops_on_empty():
     """Pagination stops when API returns empty jobs list."""
     fixture = load_fixture("himalayas_response.json")
-    responses.add(responses.GET, API_URL, json=fixture, status=200)
-    responses.add(responses.GET, API_URL, json={"jobs": []}, status=200)
+    _add_responses_for_query(fixture)
 
     source = HimalayasSource()
     jobs = source.collect()
@@ -144,6 +154,7 @@ def test_pagination_stops_on_empty():
 
 
 @responses.activate
+@patch("sources.himalayas.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_pagination_max_pages():
     """Pagination respects MAX_PAGES limit."""
     fixture = load_fixture("himalayas_response.json")
@@ -154,15 +165,11 @@ def test_pagination_max_pages():
     source = HimalayasSource()
     source.collect()
 
-    # fixture has 3 jobs but only 2 match, and pagination needs next page to
-    # have items to continue. Since fixture has 3 items (< PAGE_SIZE=20),
-    # pagination should stop after first page because len(listings) < PAGE_SIZE
-    # is not checked — it stops on empty. With 3 items per page and 5 max pages,
-    # it will fetch until empty or 5 pages.
     assert len(responses.calls) <= 5
 
 
 @responses.activate
+@patch("sources.himalayas.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_empty_first_page():
     """Empty first page returns no results."""
     responses.add(responses.GET, API_URL, json={"jobs": []}, status=200)
@@ -174,17 +181,18 @@ def test_empty_first_page():
 
 
 @responses.activate
-def test_http_error_raises():
-    """HTTP errors propagate (caught by safe_collect in pipeline)."""
+@patch("sources.himalayas.config.SEARCH_QUERIES", MOCK_QUERIES)
+def test_http_error_breaks_query():
+    """HTTP errors on a query break pagination for that query."""
     responses.add(responses.GET, API_URL, status=500)
 
     source = HimalayasSource()
-    import pytest
-    with pytest.raises(Exception):
-        source.collect()
+    jobs = source.collect()
+    assert jobs == []
 
 
 @responses.activate
+@patch("sources.himalayas.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_safe_collect_http_error_returns_empty():
     """safe_collect wraps HTTP errors and returns empty list."""
     responses.add(responses.GET, API_URL, status=500)
@@ -203,11 +211,11 @@ def test_date_parsing_invalid():
 
 
 @responses.activate
+@patch("sources.himalayas.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_description_extracted():
     """Description field is populated."""
     fixture = load_fixture("himalayas_response.json")
-    responses.add(responses.GET, API_URL, json=fixture, status=200)
-    responses.add(responses.GET, API_URL, json={"jobs": []}, status=200)
+    _add_responses_for_query(fixture)
 
     source = HimalayasSource()
     jobs = source.collect()
@@ -217,11 +225,11 @@ def test_description_extracted():
 
 
 @responses.activate
+@patch("sources.himalayas.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_company_field_extracted():
     """companyName mapped to company."""
     fixture = load_fixture("himalayas_response.json")
-    responses.add(responses.GET, API_URL, json=fixture, status=200)
-    responses.add(responses.GET, API_URL, json={"jobs": []}, status=200)
+    _add_responses_for_query(fixture)
 
     source = HimalayasSource()
     jobs = source.collect()
@@ -231,6 +239,7 @@ def test_company_field_extracted():
 
 
 @responses.activate
+@patch("sources.himalayas.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_location_integer_coerced_to_string():
     """Integer locationRestrictions doesn't crash — gets stringified."""
     data = {"jobs": [{
@@ -243,8 +252,7 @@ def test_location_integer_coerced_to_string():
         "pubDate": "2026-02-18T12:00:00Z",
         "description": "Test role."
     }]}
-    responses.add(responses.GET, API_URL, json=data, status=200)
-    responses.add(responses.GET, API_URL, json={"jobs": []}, status=200)
+    _add_responses_for_query(data)
 
     source = HimalayasSource()
     jobs = source.collect()
@@ -253,11 +261,11 @@ def test_location_integer_coerced_to_string():
 
 
 @responses.activate
+@patch("sources.himalayas.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_url_used_when_present():
     """When url is non-empty in response, it is used directly."""
     fixture = load_fixture("himalayas_response.json")
-    responses.add(responses.GET, API_URL, json=fixture, status=200)
-    responses.add(responses.GET, API_URL, json={"jobs": []}, status=200)
+    _add_responses_for_query(fixture)
 
     source = HimalayasSource()
     jobs = source.collect()

@@ -14,10 +14,7 @@ from sources.base import BaseSource
 
 logger = logging.getLogger(__name__)
 
-FEED_URLS = [
-    "https://jobspresso.co/feed/?post_type=job_listing&s=customer+success",
-    "https://jobspresso.co/feed/?post_type=job_listing&s=account+manager",
-]
+FEED_BASE = "https://jobspresso.co/feed/?post_type=job_listing&s="
 
 DC_NS = "http://purl.org/dc/elements/1.1/"
 
@@ -29,8 +26,13 @@ class JobspressoSource(BaseSource):
         all_jobs = []
         seen_urls = set()
 
-        for feed_url in FEED_URLS:
-            jobs = self._fetch_feed(feed_url)
+        for tag in config.SEARCH_QUERIES:
+            feed_url = FEED_BASE + tag.replace(" ", "+")
+            try:
+                jobs = self._fetch_feed(feed_url)
+            except Exception as e:
+                logger.warning(f"[jobspresso] Failed to fetch tag '{tag}': {e}")
+                continue
             for job in jobs:
                 if job.url not in seen_urls:
                     seen_urls.add(job.url)
