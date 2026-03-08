@@ -1,30 +1,45 @@
 """Tests for sources/jobspresso.py — Jobspresso RSS source."""
 
+from unittest.mock import patch
+
 import responses
 
-from sources.jobspresso import FEED_URLS, JobspressoSource
+from sources.jobspresso import FEED_BASE, JobspressoSource
 from tests.conftest import load_fixture
+
+MOCK_QUERIES = ["application support", "customer success"]
+
+
+def _mock_feed_urls():
+    """Return the feed URLs that would be built from MOCK_QUERIES."""
+    return [FEED_BASE + q.replace(" ", "+") for q in MOCK_QUERIES]
+
+
+def _add_responses_for_queries(body):
+    """Add mock responses for each query's feed URL."""
+    for url in _mock_feed_urls():
+        responses.add(responses.GET, url, body=body, status=200)
 
 
 @responses.activate
+@patch("sources.jobspresso.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_collect_both_feeds():
     """Both keyword feed URLs are fetched."""
     xml = load_fixture("jobspresso_feed.xml")
-    for url in FEED_URLS:
-        responses.add(responses.GET, url, body=xml, status=200)
+    _add_responses_for_queries(xml)
 
     source = JobspressoSource()
     source.collect()
 
-    assert len(responses.calls) == 2
+    assert len(responses.calls) == len(MOCK_QUERIES)
 
 
 @responses.activate
+@patch("sources.jobspresso.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_role_filter_applied():
     """Non-matching titles excluded."""
     xml = load_fixture("jobspresso_feed.xml")
-    for url in FEED_URLS:
-        responses.add(responses.GET, url, body=xml, status=200)
+    _add_responses_for_queries(xml)
 
     source = JobspressoSource()
     jobs = source.collect()
@@ -34,11 +49,11 @@ def test_role_filter_applied():
 
 
 @responses.activate
+@patch("sources.jobspresso.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_dc_creator_company_extraction():
     """Company parsed from dc:creator field."""
     xml = load_fixture("jobspresso_feed.xml")
-    for url in FEED_URLS:
-        responses.add(responses.GET, url, body=xml, status=200)
+    _add_responses_for_queries(xml)
 
     source = JobspressoSource()
     jobs = source.collect()
@@ -48,11 +63,11 @@ def test_dc_creator_company_extraction():
 
 
 @responses.activate
+@patch("sources.jobspresso.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_dc_creator_location_extraction():
     """Location parsed from dc:creator after <br> marker."""
     xml = load_fixture("jobspresso_feed.xml")
-    for url in FEED_URLS:
-        responses.add(responses.GET, url, body=xml, status=200)
+    _add_responses_for_queries(xml)
 
     source = JobspressoSource()
     jobs = source.collect()
@@ -62,11 +77,11 @@ def test_dc_creator_location_extraction():
 
 
 @responses.activate
+@patch("sources.jobspresso.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_salary_extraction_from_description():
     """Salary range extracted from content:encoded text."""
     xml = load_fixture("jobspresso_feed.xml")
-    for url in FEED_URLS:
-        responses.add(responses.GET, url, body=xml, status=200)
+    _add_responses_for_queries(xml)
 
     source = JobspressoSource()
     jobs = source.collect()
@@ -77,11 +92,11 @@ def test_salary_extraction_from_description():
 
 
 @responses.activate
+@patch("sources.jobspresso.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_salary_k_format():
     """k-notation salary extracted correctly."""
     xml = load_fixture("jobspresso_feed.xml")
-    for url in FEED_URLS:
-        responses.add(responses.GET, url, body=xml, status=200)
+    _add_responses_for_queries(xml)
 
     source = JobspressoSource()
     jobs = source.collect()
@@ -92,11 +107,11 @@ def test_salary_k_format():
 
 
 @responses.activate
+@patch("sources.jobspresso.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_dedup_across_queries():
     """Same URL from both keyword queries counted once."""
     xml = load_fixture("jobspresso_feed.xml")
-    for url in FEED_URLS:
-        responses.add(responses.GET, url, body=xml, status=200)
+    _add_responses_for_queries(xml)
 
     source = JobspressoSource()
     jobs = source.collect()
@@ -105,11 +120,11 @@ def test_dedup_across_queries():
 
 
 @responses.activate
+@patch("sources.jobspresso.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_date_parsing_rfc2822():
     """RFC 2822 date parsed correctly."""
     xml = load_fixture("jobspresso_feed.xml")
-    for url in FEED_URLS:
-        responses.add(responses.GET, url, body=xml, status=200)
+    _add_responses_for_queries(xml)
 
     source = JobspressoSource()
     jobs = source.collect()
@@ -119,11 +134,11 @@ def test_date_parsing_rfc2822():
 
 
 @responses.activate
+@patch("sources.jobspresso.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_all_remote():
     """Every returned job has is_remote=True."""
     xml = load_fixture("jobspresso_feed.xml")
-    for url in FEED_URLS:
-        responses.add(responses.GET, url, body=xml, status=200)
+    _add_responses_for_queries(xml)
 
     source = JobspressoSource()
     jobs = source.collect()
@@ -131,11 +146,11 @@ def test_all_remote():
 
 
 @responses.activate
+@patch("sources.jobspresso.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_html_stripped_from_description():
     """HTML tags stripped from description text."""
     xml = load_fixture("jobspresso_feed.xml")
-    for url in FEED_URLS:
-        responses.add(responses.GET, url, body=xml, status=200)
+    _add_responses_for_queries(xml)
 
     source = JobspressoSource()
     jobs = source.collect()
@@ -197,11 +212,11 @@ def test_date_parsing_invalid():
 
 
 @responses.activate
+@patch("sources.jobspresso.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_channel_missing_returns_empty():
     """RSS with no <channel> → empty list."""
     xml = '<?xml version="1.0" encoding="UTF-8"?><rss></rss>'
-    for url in FEED_URLS:
-        responses.add(responses.GET, url, body=xml, status=200)
+    _add_responses_for_queries(xml)
 
     source = JobspressoSource()
     jobs = source.collect()
@@ -209,10 +224,10 @@ def test_channel_missing_returns_empty():
 
 
 @responses.activate
+@patch("sources.jobspresso.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_xml_parse_error_returns_empty():
     """Malformed XML → exception caught by safe_collect."""
-    for url in FEED_URLS:
-        responses.add(responses.GET, url, body="not xml at all", status=200)
+    _add_responses_for_queries("not xml at all")
 
     source = JobspressoSource()
     jobs = source.safe_collect()
@@ -220,6 +235,7 @@ def test_xml_parse_error_returns_empty():
 
 
 @responses.activate
+@patch("sources.jobspresso.config.SEARCH_QUERIES", MOCK_QUERIES)
 def test_description_fallback_to_description_tag():
     """When content:encoded missing, falls back to <description>."""
     xml = """<?xml version="1.0" encoding="UTF-8"?>
@@ -233,8 +249,7 @@ def test_description_fallback_to_description_tag():
         </item>
       </channel>
     </rss>"""
-    for url in FEED_URLS:
-        responses.add(responses.GET, url, body=xml, status=200)
+    _add_responses_for_queries(xml)
 
     source = JobspressoSource()
     jobs = source.collect()

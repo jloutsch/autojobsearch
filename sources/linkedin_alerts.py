@@ -11,6 +11,7 @@ Only jobs posted in the last 24 hours are included.
 """
 
 import logging
+import xml.etree.ElementTree as _ET_types
 import defusedxml.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
@@ -73,7 +74,7 @@ class LinkedInAlertsSource(BaseSource):
 
         return jobs
 
-    def _parse_entry(self, entry: ET.Element, cutoff: datetime) -> JobListing | None:
+    def _parse_entry(self, entry: _ET_types.Element, cutoff: datetime) -> JobListing | None:
         # Parse published date and enforce 24-hour recency
         updated_str = entry.findtext(f"{ATOM_NS}updated", "")
         published_str = entry.findtext(f"{ATOM_NS}published", updated_str)
