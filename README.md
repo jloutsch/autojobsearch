@@ -14,6 +14,12 @@ Job search pipeline that discovers, scores, and delivers relevant job listings. 
 - **Deduplication** — Fuzzy matching across sources + SQLite tracking of previously delivered listings
 - **Optional daily automation** — Included GitHub Actions workflow can run weekday mornings and commit reports to the repo
 
+## Prerequisites
+
+- **[Docker Desktop](https://www.docker.com/products/docker-desktop/)** — runs the dashboard and pipeline in a container
+- **[Ollama](https://ollama.com)** — local AI model runtime for resume parsing and job fit scoring (optional but recommended; without it, only rule-based scoring is used)
+- **Git** — to clone the repository
+
 ## Quick Start
 
 ### 1. Clone the repo
