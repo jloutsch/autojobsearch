@@ -6,3 +6,8 @@ seen_jobs.db
 reports/
 data/
 profile.json
+.DS_Store
+.coverage
+.github/workflows/CLAUDE.md
+sources/CLAUDE.md
+CLAUDE.md
