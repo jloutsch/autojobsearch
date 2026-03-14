@@ -25,6 +25,9 @@ from sources.weworkremotely import WeWorkRemotelySource
 from sources.ashby import AshbySource
 from sources.themuse import TheMuseSource
 from sources.workatastartup import WorkAtAStartupSource
+from sources.wellfound import WellfoundSource
+from sources.indeed import IndeedSource
+from sources.remoteco import RemoteCoSource
 from sources.workingnomads import WorkingNomadsSource
 
 logging.basicConfig(
@@ -60,6 +63,10 @@ def run_pipeline():
         WorkAtAStartupSource(),
         TheMuseSource(),
         AshbySource(),
+        # Chrome browser sources (opt-in, skip in Docker/CI)
+        WellfoundSource(),
+        IndeedSource(),
+        RemoteCoSource(),
     ]
 
     raw_jobs = []
