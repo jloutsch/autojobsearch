@@ -247,13 +247,6 @@ Find a company's Greenhouse board token from their careers page URL (e.g., `http
 
 Find a company's Ashby board slug from their careers page URL (e.g., `https://jobs.ashbyhq.com/ramp` → slug is `ramp`). Add it to the `ashby_boards` object in your profile.
 
-### Adding LinkedIn alerts
-
-1. Go to [Google Alerts](https://www.google.com/alerts)
-2. Create an alert for `"customer success manager" site:linkedin.com/jobs`
-3. Set delivery to **RSS feed**
-4. Copy the feed URL into `sources/linkedin_alerts.py` → `ALERT_FEED_URLS`
-
 ## Architecture
 
 ```
@@ -267,7 +260,6 @@ sources/
   remoteok.py              # RemoteOK JSON API
   builtin.py               # BuiltIn HTML scraping
   weworkremotely.py        # WeWorkRemotely RSS/XML
-  linkedin_alerts.py       # LinkedIn via Google Alerts RSS
   remotive.py              # Remotive JSON API
   himalayas.py             # Himalayas paginated JSON API
   jobicy.py                # Jobicy JSON API
