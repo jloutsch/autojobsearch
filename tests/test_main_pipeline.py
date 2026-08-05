@@ -37,9 +37,8 @@ def test_pipeline_no_results(mock_init_db, mock_ai, mock_report, mock_dash):
          patch("main.CrowdStrikeSource") as cs, \
          patch("main.RemoteOKSource") as rs, \
          patch("main.BuiltInSource") as bs, \
-         patch("main.WeWorkRemotelySource") as ws, \
-         patch("main.LinkedInAlertsSource") as ls:
-        for mock_src in [gs, cs, rs, bs, ws, ls]:
+         patch("main.WeWorkRemotelySource") as ws:
+        for mock_src in [gs, cs, rs, bs, ws]:
             mock_src.return_value.safe_collect.return_value = []
 
         from main import run_pipeline
@@ -71,10 +70,9 @@ def test_pipeline_end_to_end(
          patch("main.CrowdStrikeSource") as cs, \
          patch("main.RemoteOKSource") as rs, \
          patch("main.BuiltInSource") as bs, \
-         patch("main.WeWorkRemotelySource") as ws, \
-         patch("main.LinkedInAlertsSource") as ls:
+         patch("main.WeWorkRemotelySource") as ws:
         gs.return_value.safe_collect.return_value = [job]
-        for mock_src in [cs, rs, bs, ws, ls]:
+        for mock_src in [cs, rs, bs, ws]:
             mock_src.return_value.safe_collect.return_value = []
 
         from main import run_pipeline
@@ -101,15 +99,14 @@ def test_source_failure_isolated(mock_init_db, mock_ai, mock_report, mock_dash):
          patch("main.CrowdStrikeSource") as cs, \
          patch("main.RemoteOKSource") as rs, \
          patch("main.BuiltInSource") as bs, \
-         patch("main.WeWorkRemotelySource") as ws, \
-         patch("main.LinkedInAlertsSource") as ls:
+         patch("main.WeWorkRemotelySource") as ws:
         # Use real safe_collect so it catches the collect() exception
         mock_gs = MagicMock()
         mock_gs.name = "greenhouse"
         mock_gs.collect.side_effect = RuntimeError("API down")
         mock_gs.safe_collect = lambda: BaseSource.safe_collect(mock_gs)
         gs.return_value = mock_gs
-        for mock_src in [cs, rs, bs, ws, ls]:
+        for mock_src in [cs, rs, bs, ws]:
             mock_src.return_value.safe_collect.return_value = []
 
         from main import run_pipeline
@@ -143,11 +140,10 @@ def test_dedup_removes_cross_source_duplicates(
          patch("main.CrowdStrikeSource") as cs, \
          patch("main.RemoteOKSource") as rs, \
          patch("main.BuiltInSource") as bs, \
-         patch("main.WeWorkRemotelySource") as ws, \
-         patch("main.LinkedInAlertsSource") as ls:
+         patch("main.WeWorkRemotelySource") as ws:
         gs.return_value.safe_collect.return_value = [job1]
         rs.return_value.safe_collect.return_value = [job2]
-        for mock_src in [cs, bs, ws, ls]:
+        for mock_src in [cs, bs, ws]:
             mock_src.return_value.safe_collect.return_value = []
 
         from main import run_pipeline
@@ -179,10 +175,9 @@ def test_previously_sent_excluded(
          patch("main.CrowdStrikeSource") as cs, \
          patch("main.RemoteOKSource") as rs, \
          patch("main.BuiltInSource") as bs, \
-         patch("main.WeWorkRemotelySource") as ws, \
-         patch("main.LinkedInAlertsSource") as ls:
+         patch("main.WeWorkRemotelySource") as ws:
         gs.return_value.safe_collect.return_value = [job]
-        for mock_src in [cs, rs, bs, ws, ls]:
+        for mock_src in [cs, rs, bs, ws]:
             mock_src.return_value.safe_collect.return_value = []
 
         from main import run_pipeline
@@ -216,10 +211,9 @@ def test_pipeline_all_filtered_out(
          patch("main.CrowdStrikeSource") as cs, \
          patch("main.RemoteOKSource") as rs, \
          patch("main.BuiltInSource") as bs, \
-         patch("main.WeWorkRemotelySource") as ws, \
-         patch("main.LinkedInAlertsSource") as ls:
+         patch("main.WeWorkRemotelySource") as ws:
         gs.return_value.safe_collect.return_value = [job]
-        for mock_src in [cs, rs, bs, ws, ls]:
+        for mock_src in [cs, rs, bs, ws]:
             mock_src.return_value.safe_collect.return_value = []
 
         from main import run_pipeline
@@ -248,10 +242,9 @@ def test_pipeline_all_seen_before(
          patch("main.CrowdStrikeSource") as cs, \
          patch("main.RemoteOKSource") as rs, \
          patch("main.BuiltInSource") as bs, \
-         patch("main.WeWorkRemotelySource") as ws, \
-         patch("main.LinkedInAlertsSource") as ls:
+         patch("main.WeWorkRemotelySource") as ws:
         gs.return_value.safe_collect.return_value = [job]
-        for mock_src in [cs, rs, bs, ws, ls]:
+        for mock_src in [cs, rs, bs, ws]:
             mock_src.return_value.safe_collect.return_value = []
 
         from main import run_pipeline
@@ -289,10 +282,9 @@ def test_pipeline_ai_score_combined(
          patch("main.CrowdStrikeSource") as cs, \
          patch("main.RemoteOKSource") as rs, \
          patch("main.BuiltInSource") as bs, \
-         patch("main.WeWorkRemotelySource") as ws, \
-         patch("main.LinkedInAlertsSource") as ls:
+         patch("main.WeWorkRemotelySource") as ws:
         gs.return_value.safe_collect.return_value = [job]
-        for mock_src in [cs, rs, bs, ws, ls]:
+        for mock_src in [cs, rs, bs, ws]:
             mock_src.return_value.safe_collect.return_value = []
 
         from main import run_pipeline
@@ -331,10 +323,9 @@ def test_pipeline_sorts_by_score(
          patch("main.CrowdStrikeSource") as cs, \
          patch("main.RemoteOKSource") as rs, \
          patch("main.BuiltInSource") as bs, \
-         patch("main.WeWorkRemotelySource") as ws, \
-         patch("main.LinkedInAlertsSource") as ls:
+         patch("main.WeWorkRemotelySource") as ws:
         gs.return_value.safe_collect.return_value = [job1, job2]
-        for mock_src in [cs, rs, bs, ws, ls]:
+        for mock_src in [cs, rs, bs, ws]:
             mock_src.return_value.safe_collect.return_value = []
 
         from main import run_pipeline
@@ -366,10 +357,9 @@ def test_pipeline_priority_assignment(
          patch("main.CrowdStrikeSource") as cs, \
          patch("main.RemoteOKSource") as rs, \
          patch("main.BuiltInSource") as bs, \
-         patch("main.WeWorkRemotelySource") as ws, \
-         patch("main.LinkedInAlertsSource") as ls:
+         patch("main.WeWorkRemotelySource") as ws:
         gs.return_value.safe_collect.return_value = [job]
-        for mock_src in [cs, rs, bs, ws, ls]:
+        for mock_src in [cs, rs, bs, ws]:
             mock_src.return_value.safe_collect.return_value = []
 
         from main import run_pipeline
@@ -408,10 +398,9 @@ def test_pipeline_high_priority_rule_only(
          patch("main.CrowdStrikeSource") as cs, \
          patch("main.RemoteOKSource") as rs, \
          patch("main.BuiltInSource") as bs, \
-         patch("main.WeWorkRemotelySource") as ws, \
-         patch("main.LinkedInAlertsSource") as ls:
+         patch("main.WeWorkRemotelySource") as ws:
         gs.return_value.safe_collect.return_value = [job]
-        for mock_src in [cs, rs, bs, ws, ls]:
+        for mock_src in [cs, rs, bs, ws]:
             mock_src.return_value.safe_collect.return_value = []
 
         from main import run_pipeline
