@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 import requests
 
@@ -85,10 +85,16 @@ class HimalayasSource(BaseSource):
         title_lower = title.lower()
         return any(kw in title_lower for kw in config.ROLE_KEYWORDS)
 
-    def _parse_date(self, date_str: str) -> datetime:
+    def _parse_date(self, date_str) -> datetime:
         if not date_str:
-            return datetime.now()
+            return datetime.now(timezone.utc)
+        # himalayas returns pubDate as a Unix timestamp (int seconds)
+        if isinstance(date_str, (int, float)):
+            try:
+                return datetime.fromtimestamp(date_str, tz=timezone.utc)
+            except (ValueError, OSError, OverflowError):
+                return datetime.now(timezone.utc)
         try:
-            return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-        except (ValueError, TypeError):
-            return datetime.now()
+            return datetime.fromisoformat(str(date_str).replace("Z", "+00:00"))
+        except (ValueError, TypeError, AttributeError):
+            return datetime.now(timezone.utc)
