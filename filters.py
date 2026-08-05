@@ -17,6 +17,7 @@ NON_US_SIGNALS = [
     "south africa", "nigeria", "kenya", "egypt",
     "japan", "korea", "china", "singapore", "indonesia", "australia",
     "new zealand", "philippines", "vietnam", "thailand", "malaysia", "taiwan",
+    "hong kong",
     "emea", "apac", "latam", "latin america",
     "london", "paris", "berlin", "dublin", "amsterdam", "madrid", "barcelona",
     "munich", "tokyo", "sydney", "melbourne", "toronto", "vancouver", "montreal",
@@ -158,7 +159,8 @@ def _is_us_wide_remote(loc_lower: str, loc_original: str, title: str, desc: str)
     if _is_pinned_to_non_boston_location(loc_lower, loc_original):
         return False
 
-    # Broad US-wide signals in location field (checked AFTER pinning)
+    # Broad US-wide signals in location field (checked AFTER pinning, so a
+    # city-pinned "Flexible / Remote, Salt Lake City" is already rejected above).
     us_wide_patterns = [
         "united states",
         "united states - remote",
@@ -172,6 +174,13 @@ def _is_us_wide_remote(loc_lower: str, loc_original: str, title: str, desc: str)
         "anywhere in the us",
         "anywhere in the world",
         "worldwide",
+        # Work-from-anywhere phrasings (common on TheMuse/Ashby). Non-US
+        # variants like "Flexible / Remote, Hong Kong" are caught earlier by
+        # the non-US check and the pinning check above.
+        "flexible / remote",
+        "flexible/remote",
+        "fully remote",
+        "remote - flexible",
     ]
 
     for pattern in us_wide_patterns:
