@@ -40,7 +40,9 @@ class WorkAtAStartupSource(BaseSource):
                 headers={
                     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
                     "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/120.0.0.0 Safari/537.36"
+                    "Chrome/120.0.0.0 Safari/537.36",
+                    # Without an Accept header the site returns 406 Not Acceptable.
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                 },
                 timeout=30,
             )
@@ -50,7 +52,17 @@ class WorkAtAStartupSource(BaseSource):
             return []
 
         soup = BeautifulSoup(resp.text, "html.parser")
-        return self._parse_results(soup)
+        results = self._parse_results(soup)
+        if not results:
+            # The /jobs page is now a client-rendered SPA (Algolia-backed): the
+            # returned HTML has no a[data-jobid] anchors, so this scrape yields
+            # nothing even on HTTP 200. Recovering this source requires querying
+            # YC's Algolia API directly rather than scraping HTML. See TODO.
+            logger.warning(
+                "[workatastartup] 0 listings parsed (page is JS-rendered; "
+                "needs Algolia API integration to return jobs)"
+            )
+        return results
 
     def _parse_results(self, soup: BeautifulSoup) -> list[JobListing]:
         jobs = []
