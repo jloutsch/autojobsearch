@@ -18,16 +18,12 @@ from sources.greenhouse import GreenhouseSource
 from sources.himalayas import HimalayasSource
 from sources.jobicy import JobicySource
 from sources.jobspresso import JobspressoSource
-from sources.linkedin_alerts import LinkedInAlertsSource
 from sources.remoteok import RemoteOKSource
 from sources.remotive import RemotiveSource
 from sources.weworkremotely import WeWorkRemotelySource
 from sources.ashby import AshbySource
 from sources.themuse import TheMuseSource
 from sources.workatastartup import WorkAtAStartupSource
-from sources.wellfound import WellfoundSource
-from sources.indeed import IndeedSource
-from sources.remoteco import RemoteCoSource
 from sources.workingnomads import WorkingNomadsSource
 
 logging.basicConfig(
@@ -54,7 +50,6 @@ def run_pipeline():
         RemoteOKSource(),
         BuiltInSource(),
         WeWorkRemotelySource(),
-        LinkedInAlertsSource(),
         RemotiveSource(),
         HimalayasSource(),
         JobicySource(),
@@ -63,10 +58,6 @@ def run_pipeline():
         WorkAtAStartupSource(),
         TheMuseSource(),
         AshbySource(),
-        # Chrome browser sources (opt-in, skip in Docker/CI)
-        WellfoundSource(),
-        IndeedSource(),
-        RemoteCoSource(),
     ]
 
     raw_jobs = []
