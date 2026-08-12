@@ -28,7 +28,12 @@ class WeWorkRemotelySource(BaseSource):
         seen_urls = set()
 
         for feed_url in FEED_URLS:
-            jobs = self._fetch_feed(feed_url)
+            # One unavailable feed must not discard the other's results.
+            try:
+                jobs = self._fetch_feed(feed_url)
+            except Exception as e:
+                logger.warning(f"[weworkremotely] feed {feed_url} skipped: {e}")
+                continue
             for job in jobs:
                 if job.url not in seen_urls:
                     seen_urls.add(job.url)
