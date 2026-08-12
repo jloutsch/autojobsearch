@@ -2,7 +2,7 @@
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -37,6 +37,11 @@ def make_job():
     """Factory fixture for creating JobListing instances with defaults."""
 
     def _make(**overrides):
+        # Posted "yesterday" relative to now rather than a fixed calendar date.
+        # A hardcoded date silently ages past config.MAX_JOB_AGE_DAYS, which makes
+        # every filter test start failing on the staleness check some weeks after
+        # it was written. Tests that care about staleness pass posted_date
+        # explicitly, and freeze_time still pins this where it's used.
         defaults = {
             "title": "Customer Success Manager",
             "company": "TestCorp",
@@ -47,7 +52,7 @@ def make_job():
             "salary_max": 150000,
             "location": "Remote - US",
             "is_remote": True,
-            "posted_date": datetime(2026, 2, 18, 10, 0, 0, tzinfo=timezone.utc),
+            "posted_date": datetime.now(timezone.utc) - timedelta(days=1),
         }
         defaults.update(overrides)
         return JobListing(**defaults)
