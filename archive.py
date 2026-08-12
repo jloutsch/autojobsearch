@@ -1,5 +1,27 @@
 import os
+import re
 from datetime import date, datetime, timezone
+
+from sanitize import safe_url
+
+_MD_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
+
+
+def _md_text(value: str) -> str:
+    """Make scraped text safe to inline in markdown.
+
+    Collapses newlines so a title can't forge headings or list items, and escapes
+    the bracket characters that would otherwise let it break out of a link label
+    and write its own markup.
+    """
+    cleaned = _MD_CONTROL.sub(" ", str(value or ""))
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned.replace("\\", "\\\\").replace("[", "\\[").replace("]", "\\]")
+
+
+def _md_url(raw: str) -> str:
+    """Scheme-check a URL and neutralise the parens that delimit a markdown link."""
+    return safe_url(raw).replace("(", "%28").replace(")", "%29")
 
 
 def save_daily_report(ranked_jobs: list[dict], output_dir: str = "reports/") -> str:
@@ -44,11 +66,11 @@ def save_daily_report(ranked_jobs: list[dict], output_dir: str = "reports/") -> 
 def _render_job(job: dict) -> list[str]:
     """Render a single job entry as markdown lines."""
     lines = []
-    title = job.get("title", "Unknown")
-    company = job.get("company", "Unknown")
-    url = job.get("url", "")
+    title = _md_text(job.get("title", "")) or "Unknown"
+    company = _md_text(job.get("company", "")) or "Unknown"
+    url = _md_url(job.get("url", ""))
     score = job.get("score", 0)
-    source = job.get("source", "")
+    source = _md_text(job.get("source", ""))
 
     lines.append(f"### [{title}]({url}) — {company}")
     lines.append(f"**Score:** {score:.0f}/100 | **Source:** {source}")
@@ -65,10 +87,10 @@ def _render_job(job: dict) -> list[str]:
         lines.append(f"**Posted:** {_format_posted(job['posted_date'])}")
 
     if job.get("location"):
-        lines.append(f"**Location:** {job['location']}")
+        lines.append(f"**Location:** {_md_text(job['location'])}")
 
     if job.get("summary"):
-        lines.append(f"\n{job['summary']}")
+        lines.append(f"\n{_md_text(job['summary'])}")
 
     lines.append("")  # blank line between entries
     return lines
