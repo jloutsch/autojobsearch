@@ -80,7 +80,7 @@ class HimalayasSource(BaseSource):
                     description=item.get("description", ""),
                     salary_min=salary_min,
                     salary_max=salary_max,
-                    location=str(item.get("locationRestrictions", "") or "") or "Worldwide",
+                    location=self._extract_location(item),
                     is_remote=True,
                     posted_date=posted,
                     raw_data=item,
@@ -90,6 +90,19 @@ class HimalayasSource(BaseSource):
     def _matches_role(self, title: str) -> bool:
         title_lower = title.lower()
         return any(kw in title_lower for kw in config.ROLE_KEYWORDS)
+
+    def _extract_location(self, item: dict) -> str:
+        """Render locationRestrictions as readable text.
+
+        The API returns this field as a list of country names, so str() on it
+        produced its Python repr — reports showed "['United States']" rather
+        than "United States". An empty list means no restriction.
+        """
+        raw = item.get("locationRestrictions")
+        if isinstance(raw, (list, tuple)):
+            names = [str(x).strip() for x in raw if str(x or "").strip()]
+            return ", ".join(names) if names else "Worldwide"
+        return str(raw or "").strip() or "Worldwide"
 
     def _parse_date(self, date_str) -> datetime:
         if not date_str:
