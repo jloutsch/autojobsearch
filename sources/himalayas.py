@@ -22,7 +22,13 @@ class HimalayasSource(BaseSource):
         seen_urls = set()
 
         for query in config.SEARCH_QUERIES:
-            self._fetch_query(query, jobs, seen_urls)
+            # One failing query must not discard the jobs already collected by
+            # the others.
+            try:
+                self._fetch_query(query, jobs, seen_urls)
+            except Exception as e:
+                logger.warning(f"[himalayas] query '{query}' skipped: {e}")
+                continue
 
         return jobs
 
