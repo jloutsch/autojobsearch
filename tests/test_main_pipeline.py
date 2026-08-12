@@ -1,6 +1,7 @@
 """Tests for main.py — run_pipeline integration tests."""
 
-from datetime import datetime, timezone
+from contextlib import contextmanager
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 from models import JobListing
@@ -18,10 +19,28 @@ def _make_job(**overrides):
         "salary_max": 150000,
         "location": "Remote - US",
         "is_remote": True,
-        "posted_date": datetime(2026, 2, 18, 10, 0, 0, tzinfo=timezone.utc),
+        # Relative, not a fixed date — see the note in conftest.make_job.
+        "posted_date": datetime.now(timezone.utc) - timedelta(days=1),
     }
     defaults.update(overrides)
     return JobListing(**defaults)
+
+
+@contextmanager
+def stub_sources(*job_lists):
+    """Replace the whole source list with stubs returning the given jobs.
+
+    Patches main.build_sources rather than individual source classes. Patching
+    classes one by one leaves any unlisted source live, so it makes real network
+    calls and the suite hangs — which is exactly what this used to do.
+    """
+    stubs = []
+    for jobs in job_lists:
+        stub = MagicMock()
+        stub.safe_collect.return_value = list(jobs)
+        stubs.append(stub)
+    with patch("main.build_sources", return_value=stubs):
+        yield stubs
 
 
 @patch("main.generate_dashboard")
@@ -33,14 +52,7 @@ def test_pipeline_no_results(mock_init_db, mock_ai, mock_report, mock_dash):
     mock_ai.return_value = []
     mock_report.return_value = "reports/2026-02-19.md"
 
-    with patch("main.GreenhouseSource") as gs, \
-         patch("main.CrowdStrikeSource") as cs, \
-         patch("main.RemoteOKSource") as rs, \
-         patch("main.BuiltInSource") as bs, \
-         patch("main.WeWorkRemotelySource") as ws:
-        for mock_src in [gs, cs, rs, bs, ws]:
-            mock_src.return_value.safe_collect.return_value = []
-
+    with stub_sources([], [], []):
         from main import run_pipeline
         result = run_pipeline()
 
@@ -66,15 +78,7 @@ def test_pipeline_end_to_end(
     mock_report.return_value = "reports/2026-02-19.md"
     mock_dash.return_value = "reports/2026-02-19.html"
 
-    with patch("main.GreenhouseSource") as gs, \
-         patch("main.CrowdStrikeSource") as cs, \
-         patch("main.RemoteOKSource") as rs, \
-         patch("main.BuiltInSource") as bs, \
-         patch("main.WeWorkRemotelySource") as ws:
-        gs.return_value.safe_collect.return_value = [job]
-        for mock_src in [cs, rs, bs, ws]:
-            mock_src.return_value.safe_collect.return_value = []
-
+    with stub_sources([job], []):
         from main import run_pipeline
         result = run_pipeline()
 
@@ -95,22 +99,18 @@ def test_source_failure_isolated(mock_init_db, mock_ai, mock_report, mock_dash):
     mock_ai.return_value = []
     mock_report.return_value = "reports/2026-02-19.md"
 
-    with patch("main.GreenhouseSource") as gs, \
-         patch("main.CrowdStrikeSource") as cs, \
-         patch("main.RemoteOKSource") as rs, \
-         patch("main.BuiltInSource") as bs, \
-         patch("main.WeWorkRemotelySource") as ws:
-        # Use real safe_collect so it catches the collect() exception
-        mock_gs = MagicMock()
-        mock_gs.name = "greenhouse"
-        mock_gs.collect.side_effect = RuntimeError("API down")
-        mock_gs.safe_collect = lambda: BaseSource.safe_collect(mock_gs)
-        gs.return_value = mock_gs
-        for mock_src in [cs, rs, bs, ws]:
-            mock_src.return_value.safe_collect.return_value = []
+    # Real safe_collect so it catches the collect() exception.
+    failing = MagicMock()
+    failing.name = "greenhouse"
+    failing.collect.side_effect = RuntimeError("API down")
+    failing.safe_collect = lambda: BaseSource.safe_collect(failing)
 
+    healthy = MagicMock()
+    healthy.safe_collect.return_value = []
+
+    with patch("main.build_sources", return_value=[failing, healthy]):
         from main import run_pipeline
-        # Should not raise despite Greenhouse failure
+        # Should not raise despite the source failure
         result = run_pipeline()
 
     assert result == []
@@ -136,16 +136,7 @@ def test_dedup_removes_cross_source_duplicates(
     mock_report.return_value = "reports/2026-02-19.md"
     mock_dash.return_value = "reports/2026-02-19.html"
 
-    with patch("main.GreenhouseSource") as gs, \
-         patch("main.CrowdStrikeSource") as cs, \
-         patch("main.RemoteOKSource") as rs, \
-         patch("main.BuiltInSource") as bs, \
-         patch("main.WeWorkRemotelySource") as ws:
-        gs.return_value.safe_collect.return_value = [job1]
-        rs.return_value.safe_collect.return_value = [job2]
-        for mock_src in [cs, bs, ws]:
-            mock_src.return_value.safe_collect.return_value = []
-
+    with stub_sources([job1], [job2]):
         from main import run_pipeline
         result = run_pipeline()
 
@@ -171,15 +162,7 @@ def test_previously_sent_excluded(
     mock_ai.return_value = []
     mock_report.return_value = "reports/2026-02-19.md"
 
-    with patch("main.GreenhouseSource") as gs, \
-         patch("main.CrowdStrikeSource") as cs, \
-         patch("main.RemoteOKSource") as rs, \
-         patch("main.BuiltInSource") as bs, \
-         patch("main.WeWorkRemotelySource") as ws:
-        gs.return_value.safe_collect.return_value = [job]
-        for mock_src in [cs, rs, bs, ws]:
-            mock_src.return_value.safe_collect.return_value = []
-
+    with stub_sources([job], []):
         from main import run_pipeline
         result = run_pipeline()
 
@@ -206,16 +189,7 @@ def test_pipeline_all_filtered_out(
     mock_filters.return_value = False  # All jobs fail filter
     mock_report.return_value = "reports/2026-02-19.md"
 
-    job = _make_job()
-    with patch("main.GreenhouseSource") as gs, \
-         patch("main.CrowdStrikeSource") as cs, \
-         patch("main.RemoteOKSource") as rs, \
-         patch("main.BuiltInSource") as bs, \
-         patch("main.WeWorkRemotelySource") as ws:
-        gs.return_value.safe_collect.return_value = [job]
-        for mock_src in [cs, rs, bs, ws]:
-            mock_src.return_value.safe_collect.return_value = []
-
+    with stub_sources([_make_job()], []):
         from main import run_pipeline
         result = run_pipeline()
 
@@ -237,16 +211,7 @@ def test_pipeline_all_seen_before(
     """All jobs previously sent → empty report."""
     mock_report.return_value = "reports/2026-02-19.md"
 
-    job = _make_job()
-    with patch("main.GreenhouseSource") as gs, \
-         patch("main.CrowdStrikeSource") as cs, \
-         patch("main.RemoteOKSource") as rs, \
-         patch("main.BuiltInSource") as bs, \
-         patch("main.WeWorkRemotelySource") as ws:
-        gs.return_value.safe_collect.return_value = [job]
-        for mock_src in [cs, rs, bs, ws]:
-            mock_src.return_value.safe_collect.return_value = []
-
+    with stub_sources([_make_job()], []):
         from main import run_pipeline
         result = run_pipeline()
 
@@ -265,36 +230,59 @@ def test_pipeline_ai_score_combined(
     mock_init_db, mock_filters, mock_dedup, mock_sent, mock_mark,
     mock_ai, mock_report, mock_dash
 ):
-    """AI score + rule score combined correctly."""
+    """A successful AI result is blended in and its analysis propagates."""
     job = _make_job()
-    ai_result = {
+    mock_ai.return_value = [{
         "fit_score": 35,
         "summary": "Good match.",
         "key_matches": ["cybersecurity"],
         "gaps": [],
-        "priority": "high",
-    }
-    mock_ai.return_value = [ai_result]
+        "status": "ok",
+    }]
     mock_report.return_value = "reports/2026-02-19.md"
     mock_dash.return_value = "reports/2026-02-19.html"
 
-    with patch("main.GreenhouseSource") as gs, \
-         patch("main.CrowdStrikeSource") as cs, \
-         patch("main.RemoteOKSource") as rs, \
-         patch("main.BuiltInSource") as bs, \
-         patch("main.WeWorkRemotelySource") as ws:
-        gs.return_value.safe_collect.return_value = [job]
-        for mock_src in [cs, rs, bs, ws]:
-            mock_src.return_value.safe_collect.return_value = []
-
+    with stub_sources([job], []):
         from main import run_pipeline
         result = run_pipeline()
 
     assert len(result) == 1
-    assert result[0]["score"] > 35  # rule_based_score adds to the 35
-    assert result[0]["priority"] == "high"
+    assert result[0]["scored_by"] == "ai"
+    assert 0 < result[0]["score"] <= 100
     assert result[0]["summary"] == "Good match."
     assert result[0]["key_matches"] == ["cybersecurity"]
+
+
+@patch("main.generate_dashboard")
+@patch("main.save_daily_report")
+@patch("main.score_top_jobs")
+@patch("main.mark_as_sent")
+@patch("main.was_previously_sent", return_value=False)
+@patch("main.is_duplicate", return_value=False)
+@patch("main.passes_hard_filters", return_value=True)
+@patch("main.init_db")
+def test_pipeline_ai_failure_falls_back_to_rules(
+    mock_init_db, mock_filters, mock_dedup, mock_sent, mock_mark,
+    mock_ai, mock_report, mock_dash
+):
+    """A failed AI call must not be treated as a genuine zero score."""
+    job = _make_job()
+    # fit_score 0 with an error status — the job should be ranked on rules
+    # alone rather than being buried by the failure.
+    mock_ai.return_value = [{
+        "fit_score": 0, "summary": "", "key_matches": [], "gaps": [],
+        "status": "error",
+    }]
+    mock_report.return_value = "reports/2026-02-19.md"
+    mock_dash.return_value = "reports/2026-02-19.html"
+
+    with stub_sources([job], []):
+        from main import run_pipeline
+        result = run_pipeline()
+
+    assert len(result) == 1
+    assert result[0]["scored_by"] == "rules"
+    assert result[0]["score"] > 0
 
 
 @patch("main.generate_dashboard")
@@ -319,15 +307,7 @@ def test_pipeline_sorts_by_score(
     mock_report.return_value = "reports/2026-02-19.md"
     mock_dash.return_value = "reports/2026-02-19.html"
 
-    with patch("main.GreenhouseSource") as gs, \
-         patch("main.CrowdStrikeSource") as cs, \
-         patch("main.RemoteOKSource") as rs, \
-         patch("main.BuiltInSource") as bs, \
-         patch("main.WeWorkRemotelySource") as ws:
-        gs.return_value.safe_collect.return_value = [job1, job2]
-        for mock_src in [cs, rs, bs, ws]:
-            mock_src.return_value.safe_collect.return_value = []
-
+    with stub_sources([job1, job2], []):
         from main import run_pipeline
         result = run_pipeline()
 
@@ -347,21 +327,13 @@ def test_pipeline_priority_assignment(
     mock_init_db, mock_filters, mock_dedup, mock_sent, mock_mark,
     mock_ai, mock_report, mock_dash
 ):
-    """Rule-only: >=30 high, >=20 medium, else low."""
+    """Priority is derived from the 0-100 composite, not from the model."""
     job = _make_job()
     mock_ai.return_value = [None]
     mock_report.return_value = "reports/2026-02-19.md"
     mock_dash.return_value = "reports/2026-02-19.html"
 
-    with patch("main.GreenhouseSource") as gs, \
-         patch("main.CrowdStrikeSource") as cs, \
-         patch("main.RemoteOKSource") as rs, \
-         patch("main.BuiltInSource") as bs, \
-         patch("main.WeWorkRemotelySource") as ws:
-        gs.return_value.safe_collect.return_value = [job]
-        for mock_src in [cs, rs, bs, ws]:
-            mock_src.return_value.safe_collect.return_value = []
-
+    with stub_sources([job], []):
         from main import run_pipeline
         result = run_pipeline()
 
@@ -381,8 +353,9 @@ def test_pipeline_high_priority_rule_only(
     mock_init_db, mock_filters, mock_dedup, mock_sent, mock_mark,
     mock_ai, mock_report, mock_dash
 ):
-    """Rule score >= 30 → 'high' priority without AI (line 106)."""
-    # Create a job that scores 30+: primary title match (15) + priority company (10) + salary (10) = 35
+    """A strong rule score alone reaches 'high' on the normalised scale."""
+    # primary title match (15) + priority company (10) + salary (10) = 35/50,
+    # which normalises to 70/100 — the 'high' threshold.
     job = _make_job(
         title="Application Support Manager",  # primary role tag
         company="SentinelOne",  # priority company
@@ -394,18 +367,11 @@ def test_pipeline_high_priority_rule_only(
     mock_report.return_value = "reports/2026-02-19.md"
     mock_dash.return_value = "reports/2026-02-19.html"
 
-    with patch("main.GreenhouseSource") as gs, \
-         patch("main.CrowdStrikeSource") as cs, \
-         patch("main.RemoteOKSource") as rs, \
-         patch("main.BuiltInSource") as bs, \
-         patch("main.WeWorkRemotelySource") as ws:
-        gs.return_value.safe_collect.return_value = [job]
-        for mock_src in [cs, rs, bs, ws]:
-            mock_src.return_value.safe_collect.return_value = []
-
+    with stub_sources([job], []):
         from main import run_pipeline
         result = run_pipeline()
 
     assert len(result) == 1
+    assert result[0]["scored_by"] == "rules"
     assert result[0]["priority"] == "high"
-    assert result[0]["score"] >= 30
+    assert result[0]["score"] >= 70
