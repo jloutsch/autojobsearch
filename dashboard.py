@@ -6,6 +6,7 @@ import os
 from datetime import date
 
 from ai_scorer import OLLAMA_MODEL
+from sanitize import safe_url
 from user_profile import get_profile
 
 
@@ -411,6 +412,13 @@ const DEFAULT_PROFILE = {profile_json};
 function escapeHtml(str) {{
   if (!str) return '';
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}}
+
+// Escaping alone does not neutralise a "javascript:" URL, so hrefs built from
+// scraped job data are scheme-checked before they reach the DOM.
+function safeUrl(raw) {{
+  const candidate = String(raw || '').replace(/[\\u0000-\\u0020]/g, '');
+  return /^https?:\\/\\//i.test(candidate) ? candidate : '#';
 }}
 
 // --- Profile Management ---
@@ -868,7 +876,7 @@ function buildJobRow(job) {{
   tr.innerHTML = `
     <td data-sort="${{score}}" class="score">${{Math.round(score)}}</td>
     <td data-sort="${{pOrder[priority] ?? 2}}" class="priority-${{priority}}">${{escapeHtml(priority)}}</td>
-    <td><a href="${{escapeHtml(job.url || '#')}}" target="_blank" class="job-title">${{escapeHtml(job.title)}}</a></td>
+    <td><a href="${{escapeHtml(safeUrl(job.url))}}" target="_blank" rel="noopener noreferrer" class="job-title">${{escapeHtml(job.title)}}</a></td>
     <td class="company">${{escapeHtml(job.company)}}</td>
     <td data-sort="${{salMin}}" class="salary">${{formatSalary(salMin, salMax)}}</td>
     <td>${{escapeHtml(job.location)}}</td>
@@ -1360,7 +1368,7 @@ def _render_row(job: dict) -> str:
     """Render a single table row."""
     title = html.escape(job.get("title", ""))
     company = html.escape(job.get("company", ""))
-    url = html.escape(job.get("url", "#"))
+    url = html.escape(safe_url(job.get("url", "")))
     score = job.get("score", 0)
     priority_raw = job.get("priority", "low")
     # Whitelist priority to prevent injection via AI output

@@ -4,7 +4,10 @@ import os
 
 from freezegun import freeze_time
 
+import pytest
+
 from dashboard import _format_age, _render_row, generate_dashboard
+from sanitize import safe_url as _safe_url
 
 
 @freeze_time("2026-02-19 12:00:00", tz_offset=0)
@@ -316,3 +319,45 @@ def test_format_age_months():
     """90 days ago → '3 months ago' (line 1353-1354)."""
     result = _format_age("2025-11-21T12:00:00+00:00")
     assert result == "3 months ago"
+
+
+# --- href scheme safety ---
+#
+# Job URLs are scraped from third parties and the dashboard is served over HTTP
+# alongside the /api/profile endpoints, so a script URL here would run against
+# an origin that can read the user's resume. html.escape does not stop one.
+
+
+@pytest.mark.parametrize("hostile", [
+    "javascript:eval(atob(YWxlcnQoMSk))",
+    " javascript:alert(1)",
+    "java\tscript:alert(1)",
+    "JaVaScRiPt:alert(1)",
+    "data:text/html,<script>alert(1)</script>",
+    "vbscript:msgbox(1)",
+    "",
+    None,
+])
+def test_safe_url_rejects_non_http_schemes(hostile):
+    assert _safe_url(hostile) == "#"
+
+
+@pytest.mark.parametrize("legit", [
+    "https://boards.greenhouse.io/foo/jobs/123",
+    "http://example.com/job?a=1&b=2",
+    "https://www.linkedin.com/jobs/view/456/",
+])
+def test_safe_url_preserves_real_links(legit):
+    assert _safe_url(legit) == legit
+
+
+def test_render_row_strips_script_url():
+    """End to end: a hostile URL never reaches the rendered href."""
+    row = _render_row({
+        "title": "Job", "company": "C", "url": "javascript:eval(atob(x))",
+        "score": 80, "priority": "high", "source": "s", "location": "Remote",
+        "summary": "", "posted_date": "2026-02-18T00:00:00+00:00",
+        "salary_min": 0, "salary_max": 0,
+    })
+    assert "javascript:" not in row
+    assert 'href="#"' in row
