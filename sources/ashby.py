@@ -17,9 +17,23 @@ class AshbySource(BaseSource):
 
     def collect(self) -> list[JobListing]:
         all_jobs = []
+        failed = []
         for company, slug in config.ASHBY_BOARDS.items():
-            jobs = self._fetch_board(company, slug)
+            # Isolate each board — see the note in greenhouse.collect().
+            try:
+                jobs = self._fetch_board(company, slug)
+            except Exception as e:
+                failed.append(slug)
+                logger.warning(f"[ashby/{slug}] skipped: {e}")
+                continue
             all_jobs.extend(jobs)
+
+        if failed:
+            logger.warning(
+                f"[ashby] {len(failed)} of {len(config.ASHBY_BOARDS)} boards failed "
+                f"and were skipped: {', '.join(failed)}. A board that fails every run "
+                f"is likely retired — remove it from ashby_boards in profile.json."
+            )
         return all_jobs
 
     def _fetch_board(self, company: str, slug: str) -> list[JobListing]:

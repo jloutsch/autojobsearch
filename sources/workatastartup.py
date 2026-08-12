@@ -24,7 +24,12 @@ class WorkAtAStartupSource(BaseSource):
         seen_urls = set()
 
         for role in ROLE_PARAMS:
-            jobs = self._fetch_page(role)
+            # One failing role query must not discard the other's results.
+            try:
+                jobs = self._fetch_page(role)
+            except Exception as e:
+                logger.warning(f"[workatastartup] role '{role}' skipped: {e}")
+                continue
             for job in jobs:
                 if job.url not in seen_urls:
                     seen_urls.add(job.url)

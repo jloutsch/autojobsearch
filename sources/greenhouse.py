@@ -17,9 +17,26 @@ class GreenhouseSource(BaseSource):
 
     def collect(self) -> list[JobListing]:
         all_jobs = []
+        failed = []
         for company, board_token in config.GREENHOUSE_BOARDS.items():
-            jobs = self._fetch_board(company, board_token)
+            # Isolate each board. Boards are independent, so one retired or
+            # renamed token must not discard the results already gathered from
+            # the others or stop the remaining ones being fetched.
+            try:
+                jobs = self._fetch_board(company, board_token)
+            except Exception as e:
+                failed.append(board_token)
+                logger.warning(f"[greenhouse/{board_token}] skipped: {e}")
+                continue
             all_jobs.extend(jobs)
+
+        if failed:
+            logger.warning(
+                f"[greenhouse] {len(failed)} of {len(config.GREENHOUSE_BOARDS)} boards "
+                f"failed and were skipped: {', '.join(failed)}. "
+                f"A board that fails every run is likely retired — remove it from "
+                f"greenhouse_boards in profile.json."
+            )
         return all_jobs
 
     def _fetch_board(self, company: str, board_token: str) -> list[JobListing]:
