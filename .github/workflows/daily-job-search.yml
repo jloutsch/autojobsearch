@@ -8,7 +8,7 @@ on:
   workflow_dispatch: # Allow manual trigger for testing
 
 permissions:
-  contents: write  # For committing daily reports
+  contents: read  # Reports upload as artifacts; nothing is committed back
 
 jobs:
   search:
@@ -48,10 +48,14 @@ jobs:
           retention-days: 90
           overwrite: true
 
-      - name: Commit daily report and dashboard
-        run: |
-          git config user.name "Job Search Bot"
-          git config user.email "bot@noreply.github.com"
-          git add --force reports/
-          git diff --staged --quiet || git commit -m "Daily job report $(date +%Y-%m-%d)"
-          git push
+      # Reports are build output, not source. Committing them grew the repo by
+      # ~257k lines across 224 files and published every run of a personal job
+      # search to a public repo. They are uploaded as an artifact instead, so
+      # each run stays downloadable without entering git history.
+      - name: Upload daily report and dashboard
+        uses: actions/upload-artifact@v4
+        with:
+          name: job-report-${{ github.run_id }}
+          path: reports/
+          retention-days: 90
+          if-no-files-found: warn

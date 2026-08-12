@@ -181,7 +181,7 @@ Each source module extends `BaseSource` with a `collect()` method that returns s
 Each time the pipeline runs, discovered jobs are stored in a local SQLite database (`seen_jobs.db`) to avoid showing the same listing twice. This means:
 
 - **Jobs appear in search results only once.** After they're scored and delivered, they're marked as "seen" and won't show up in future runs.
-- **Past results are preserved as dated reports.** Every pipeline run generates a timestamped HTML dashboard and markdown report in the `reports/` directory (e.g., `reports/2026-02-19.html`, `reports/2026-02-19.md`).
+- **Past results are preserved as dated reports.** Every pipeline run generates a timestamped HTML dashboard and markdown report in the `reports/` directory (e.g., `reports/2026-02-19.html`, `reports/2026-02-19.md`). These stay local — `reports/` is gitignored, and the scheduled workflow uploads its output as a run artifact rather than committing it. See [`docs/example-report.md`](docs/example-report.md) for a sample of what a run produces.
 - **Access past results from the dashboard.** Click the **Past Results** button in the header to browse all previous search reports by date.
 - **Reset to see all jobs again.** Delete `seen_jobs.db` to clear the history and re-discover all available listings on the next run.
 - **Changing role tags auto-resets.** When you update your role tags in the profile and run a new search from the dashboard, the seen jobs database is automatically cleared so the new keywords get fresh results.
@@ -279,6 +279,7 @@ archive.py                 # Markdown report generation
 config.py                  # Config loader from profile.json
 user_profile.py            # Profile cache with thread safety
 
+docs/example-report.md     # Sample output, so results are visible without a run
 reports/                   # Generated dashboards and reports (gitignored)
 ```
 

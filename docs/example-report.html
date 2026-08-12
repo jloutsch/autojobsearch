@@ -1,0 +1,1961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Search Dashboard — 2026-08-12</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+         background: #0f172a; color: #e2e8f0; line-height: 1.5; }
+
+  .header { background: #1e293b; padding: 24px 32px; border-bottom: 1px solid #334155;
+            display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; }
+  .header h1 { font-size: 24px; color: #f1f5f9; }
+  .header .subtitle { color: #94a3b8; font-size: 14px; margin-top: 4px; }
+
+  .header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .profile-toggle { background: #334155; border: 1px solid #475569; color: #e2e8f0;
+                     padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px;
+                     font-weight: 500; transition: all 0.15s; }
+  .profile-toggle:hover { background: #475569; }
+  .profile-toggle.active { background: #7c3aed; border-color: #7c3aed; }
+
+  .ollama-panel { display: flex; align-items: center; gap: 8px; }
+  .ollama-panel select { background: #334155; border: 1px solid #475569; border-radius: 6px;
+                         color: #e2e8f0; padding: 6px 10px; font-size: 13px; cursor: pointer; }
+  .ollama-panel select:focus { outline: none; border-color: #60a5fa; }
+  .ollama-panel .rescore-btn { background: #7c3aed; border: none; color: white; padding: 6px 14px;
+                               border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;
+                               transition: background 0.15s; }
+  .ollama-panel .rescore-btn:hover { background: #6d28d9; }
+  .ollama-panel .rescore-btn:disabled { background: #475569; cursor: not-allowed; }
+  .ollama-status { font-size: 12px; color: #94a3b8; }
+  .ollama-progress { font-size: 12px; color: #a78bfa; }
+
+  .search-btn { background: #059669; border: none; color: white; padding: 6px 14px;
+                 border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;
+                 transition: background 0.15s; }
+  .search-btn:hover { background: #047857; }
+  .search-btn:disabled { background: #475569; cursor: not-allowed; }
+  .search-status { font-size: 12px; color: #94a3b8; }
+
+  .history-wrapper { position: relative; display: inline-block; }
+  .history-btn { background: #334155; border: 1px solid #475569; color: #e2e8f0;
+                  padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px;
+                  font-weight: 500; transition: all 0.15s; }
+  .history-btn:hover { background: #475569; }
+  .history-dropdown { display: none; position: absolute; top: 100%; right: 0; margin-top: 6px;
+                       background: #1e293b; border: 1px solid #475569; border-radius: 8px;
+                       min-width: 220px; max-height: 320px; overflow-y: auto; z-index: 100;
+                       box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+  .history-dropdown.visible { display: block; }
+  .history-dropdown a { display: block; padding: 10px 16px; color: #e2e8f0; text-decoration: none;
+                         font-size: 13px; border-bottom: 1px solid #334155; transition: background 0.1s; }
+  .history-dropdown a:last-child { border-bottom: none; }
+  .history-dropdown a:hover { background: #334155; }
+  .history-empty { padding: 12px 16px; color: #64748b; font-size: 13px; }
+
+  .progress-panel { background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+                     margin: 0 32px; padding: 16px; display: none; max-height: 200px;
+                     overflow-y: auto; font-family: 'SF Mono', Monaco, Consolas, monospace; }
+  .progress-panel.visible { display: block; }
+  .progress-line { font-size: 12px; color: #94a3b8; padding: 2px 0; }
+  .progress-line.phase { color: #60a5fa; font-weight: 600; }
+  .progress-line.ai { color: #a78bfa; }
+  .progress-line.done { color: #4ade80; font-weight: 600; }
+  .progress-line.error { color: #f87171; }
+
+  /* --- Profile Panel --- */
+  .profile-panel { background: #1e293b; border-bottom: 1px solid #334155; padding: 24px 32px;
+                    display: none; }
+  .profile-panel.visible { display: block; }
+  .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .profile-section { display: flex; flex-direction: column; gap: 6px; }
+  .profile-section.full-width { grid-column: 1 / -1; }
+  .profile-label { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;
+                    display: flex; align-items: center; gap: 8px; }
+  .clear-tags { font-size: 11px; color: #94a3b8; cursor: pointer; text-transform: none;
+                 letter-spacing: 0; font-weight: 400; }
+  .clear-tags:hover { color: #f87171; }
+  .profile-textarea { background: #0f172a; border: 1px solid #334155; border-radius: 6px;
+                       color: #e2e8f0; padding: 10px 12px; font-size: 13px; font-family: inherit;
+                       resize: vertical; min-height: 80px; }
+  .profile-textarea:focus { outline: none; border-color: #60a5fa; }
+  .profile-textarea.tall { min-height: 120px; }
+
+  .tag-container { display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+                    background: #0f172a; border: 1px solid #334155; border-radius: 6px;
+                    padding: 8px 10px; min-height: 40px; }
+  .tag-container:focus-within { border-color: #60a5fa; }
+  .tag-pill { background: #334155; color: #e2e8f0; padding: 3px 10px; border-radius: 4px;
+               font-size: 13px; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .tag-pill .remove { cursor: pointer; color: #94a3b8; font-size: 15px; line-height: 1; }
+  .tag-pill .remove:hover { color: #f87171; }
+  .tag-add { background: none; border: none; color: #e2e8f0; font-size: 13px;
+              outline: none; min-width: 80px; flex: 1; }
+  .tag-add::placeholder { color: #475569; }
+
+  .salary-inputs { display: flex; gap: 12px; align-items: center; }
+  .salary-input { background: #0f172a; border: 1px solid #334155; border-radius: 6px;
+                   color: #e2e8f0; padding: 6px 10px; font-size: 13px; width: 120px; }
+  .salary-input:focus { outline: none; border-color: #60a5fa; }
+  .salary-sep { color: #475569; }
+
+  .profile-actions { display: flex; gap: 10px; margin-top: 16px; grid-column: 1 / -1; }
+  .profile-btn { padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 500;
+                  cursor: pointer; border: none; transition: background 0.15s; }
+  .profile-btn.save { background: #059669; color: white; }
+  .profile-btn.save:hover { background: #047857; }
+  .profile-btn.download { background: #2563eb; color: white; }
+  .profile-btn.download:hover { background: #1d4ed8; }
+  .profile-btn.reset { background: #334155; color: #e2e8f0; }
+  .profile-btn.reset:hover { background: #475569; }
+  .toast { position: fixed; bottom: 24px; right: 24px; background: #059669; color: white;
+            padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 500;
+            opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 100; }
+  .toast.show { opacity: 1; }
+
+  .stats { display: flex; gap: 16px; padding: 20px 32px; flex-wrap: wrap; }
+  .stat-card { background: #1e293b; border-radius: 8px; padding: 16px 20px;
+               border: 1px solid #334155; min-width: 140px; cursor: pointer;
+               transition: border-color 0.15s; }
+  .stat-card:hover { border-color: #60a5fa; }
+  .stat-card.active { border-color: #60a5fa; border-width: 2px; }
+  .stat-card .number { font-size: 28px; font-weight: 700; }
+  .stat-card .label { font-size: 13px; color: #94a3b8; }
+  .stat-high .number { color: #f87171; }
+  .stat-med .number { color: #fbbf24; }
+  .stat-low .number { color: #94a3b8; }
+  .stat-total .number { color: #60a5fa; }
+
+  .controls { padding: 12px 32px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .control-group { display: flex; gap: 8px; align-items: center; }
+  .control-label { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 2px; }
+  .search { background: #1e293b; border: 1px solid #334155; border-radius: 6px;
+            color: #e2e8f0; padding: 8px 12px; font-size: 14px; width: 260px; }
+  .search:focus { outline: none; border-color: #60a5fa; }
+  .sep { width: 1px; height: 24px; background: #334155; margin: 0 4px; }
+
+  .filter-btn { background: #334155; border: 2px solid transparent; color: #e2e8f0;
+                padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 13px;
+                transition: all 0.15s; }
+  .filter-btn:hover { background: #475569; }
+  .filter-btn.active { background: #3b82f6; border-color: #60a5fa; }
+  .filter-btn[data-priority="high"] { color: #f87171; border-color: #334155; }
+  .filter-btn[data-priority="high"].active { background: #991b1b; border-color: #f87171; color: #fecaca; }
+  .filter-btn[data-priority="medium"] { color: #fbbf24; border-color: #334155; }
+  .filter-btn[data-priority="medium"].active { background: #854d0e; border-color: #fbbf24; color: #fef3c7; }
+  .filter-btn[data-priority="low"] { color: #94a3b8; border-color: #334155; }
+  .filter-btn[data-priority="low"].active { background: #334155; border-color: #94a3b8; color: #e2e8f0; }
+
+  .age-btn { background: #334155; border: 1px solid transparent; color: #94a3b8;
+             padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 13px;
+             transition: all 0.15s; }
+  .age-btn:hover { background: #475569; color: #e2e8f0; }
+  .age-btn.active { background: #1e40af; border-color: #3b82f6; color: #bfdbfe; }
+
+  .filter-count { font-size: 12px; color: #94a3b8; margin-left: 8px; }
+
+  .table-wrap { padding: 0 32px 32px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; padding: 10px 12px; color: #94a3b8; font-weight: 600;
+       border-bottom: 2px solid #334155; cursor: pointer; user-select: none;
+       white-space: nowrap; }
+  th:hover { color: #e2e8f0; }
+  th .arrow { margin-left: 4px; font-size: 11px; }
+  td { padding: 10px 12px; border-bottom: 1px solid #1e293b; vertical-align: top; }
+  tr:hover { background: #1e293b; }
+  tr.hidden { display: none; }
+
+  .priority-high { color: #f87171; font-weight: 600; }
+  .priority-medium { color: #fbbf24; }
+  .priority-low { color: #94a3b8; }
+  .job-title { color: #60a5fa; text-decoration: none; font-weight: 500; }
+  .job-title:hover { text-decoration: underline; }
+  .company { color: #e2e8f0; font-weight: 500; }
+  .source-badge { background: #334155; padding: 2px 8px; border-radius: 4px;
+                  font-size: 12px; color: #94a3b8; }
+  .salary { color: #4ade80; white-space: nowrap; }
+  .age { color: #94a3b8; font-size: 13px; white-space: nowrap; }
+  .summary { color: #94a3b8; font-size: 13px; max-width: 320px; }
+  .score { font-weight: 600; }
+  .score.rescored { color: #a78bfa; }
+  .empty { text-align: center; padding: 60px 20px; color: #64748b; }
+
+  .resume-upload-area { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .profile-btn.upload { background: #7c3aed; color: white; border: none; padding: 8px 16px;
+                        border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; }
+  .profile-btn.upload:hover { background: #6d28d9; }
+  .profile-btn.upload:disabled { background: #475569; cursor: not-allowed; }
+  .upload-status { font-size: 13px; color: #a78bfa; }
+  .upload-status.error { color: #f87171; }
+  .upload-hint { font-size: 12px; color: #64748b; width: 100%; }
+  .resume-progress { background: #0f172a; border: 1px solid #334155; border-radius: 6px;
+                     padding: 10px 14px; margin-top: 8px; width: 100%; display: none;
+                     max-height: 120px; overflow-y: auto; }
+  .resume-progress.visible { display: block; }
+  .resume-progress .rp-line { font-size: 12px; color: #94a3b8; padding: 2px 0;
+                              font-family: 'SF Mono', Monaco, Consolas, monospace; }
+  .resume-progress .rp-line.done { color: #4ade80; font-weight: 600; }
+  .resume-progress .rp-line.error { color: #f87171; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>Daily Job Search Dashboard</h1>
+    <div class="subtitle">Wednesday, August 12, 2026 &mdash; 63 matches found</div>
+  </div>
+  <div class="header-right">
+    <button class="profile-toggle active" id="profileToggle" onclick="toggleProfile()">Profile</button>
+    <button class="search-btn" id="runSearchBtn" onclick="runSearch()">Run Search</button>
+    <div class="history-wrapper">
+      <button class="history-btn" id="historyBtn" onclick="toggleHistory()">Past Results</button>
+      <div class="history-dropdown" id="historyDropdown"></div>
+    </div>
+    <span class="search-status" id="searchStatus"></span>
+    <div class="ollama-panel">
+      <select id="modelSelect"><option value="">Loading models...</option></select>
+      <button class="rescore-btn" id="rescoreBtn" onclick="rescoreAll()" disabled>Re-score with AI</button>
+      <span class="ollama-status" id="ollamaStatus"></span>
+      <span class="ollama-progress" id="ollamaProgress"></span>
+    </div>
+  </div>
+</div>
+
+<div class="profile-panel visible" id="profilePanel">
+  <div class="profile-grid">
+    <div class="profile-section full-width">
+      <span class="profile-label">Resume Upload</span>
+      <div class="resume-upload-area">
+        <input type="file" id="resumeFileInput" accept=".pdf,.doc,.docx" style="display:none">
+        <button class="profile-btn upload" id="uploadResumeBtn" onclick="document.getElementById('resumeFileInput').click()">Upload Resume</button>
+        <span class="upload-status" id="uploadStatus"></span>
+        <div class="upload-hint">Upload a PDF or DOCX resume to auto-populate your profile tags and summary using AI</div>
+      </div>
+      <div class="resume-progress" id="resumeProgress"></div>
+    </div>
+    <div class="profile-section full-width">
+      <span class="profile-label">Resume Summary</span>
+      <textarea class="profile-textarea tall" id="resumeSummary"></textarea>
+      <div class="resume-upload-area" style="margin-top:8px">
+        <button class="profile-btn upload" id="analyzeTextBtn" onclick="analyzeResumeText()">Analyze Text</button>
+        <span class="upload-status" id="analyzeTextStatus"></span>
+        <div class="upload-hint">Paste your resume above, then click to auto-populate tags using AI</div>
+      </div>
+      <div class="resume-progress" id="analyzeTextProgress"></div>
+    </div>
+    <div class="profile-section">
+      <span class="profile-label">Role Tags <span class="clear-tags" onclick="clearTags('roleTags')">clear all</span></span>
+      <div class="tag-container" id="roleTags"></div>
+    </div>
+    <div class="profile-section">
+      <span class="profile-label">Industry Tags <span class="clear-tags" onclick="clearTags('industryTags')">clear all</span></span>
+      <div class="tag-container" id="industryTags"></div>
+    </div>
+    <div class="profile-section">
+      <span class="profile-label">Skills <span class="clear-tags" onclick="clearTags('skillTags')">clear all</span></span>
+      <div class="tag-container" id="skillTags"></div>
+    </div>
+    <div class="profile-section">
+      <span class="profile-label">Priority Companies <span class="clear-tags" onclick="clearTags('companyTags')">clear all</span></span>
+      <div class="tag-container" id="companyTags"></div>
+    </div>
+    <div class="profile-section">
+      <span class="profile-label">Salary Range</span>
+      <div class="salary-inputs">
+        <input type="number" class="salary-input" id="salaryMin" placeholder="Min">
+        <span class="salary-sep">&ndash;</span>
+        <input type="number" class="salary-input" id="salaryMax" placeholder="Max">
+        <span class="salary-sep">Floor:</span>
+        <input type="number" class="salary-input" id="salaryFloor" placeholder="Floor">
+      </div>
+    </div>
+    <div class="profile-section full-width">
+      <span class="profile-label">AI Prompt Template</span>
+      <textarea class="profile-textarea tall" id="aiPrompt"></textarea>
+    </div>
+    <div class="profile-actions">
+      <button class="profile-btn save" onclick="saveProfile()">Save to Browser</button>
+      <button class="profile-btn download" onclick="downloadProfile()">Download profile.json</button>
+      <button class="profile-btn reset" onclick="resetProfile()">Reset to Default</button>
+    </div>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat-card stat-total active" onclick="cardFilter('all')">
+    <div class="number" id="statTotal">63</div>
+    <div class="label">Total</div>
+  </div>
+  <div class="stat-card stat-high" onclick="cardFilter('high')">
+    <div class="number" id="statHigh">0</div>
+    <div class="label">High Priority</div>
+  </div>
+  <div class="stat-card stat-med" onclick="cardFilter('medium')">
+    <div class="number" id="statMed">7</div>
+    <div class="label">Medium Priority</div>
+  </div>
+  <div class="stat-card stat-low" onclick="cardFilter('low')">
+    <div class="number" id="statLow">56</div>
+    <div class="label">Other</div>
+  </div>
+</div>
+
+<div class="progress-panel" id="progressPanel"></div>
+
+<div class="controls">
+  <input type="text" class="search" placeholder="Filter by title, company, source..."
+         oninput="filterTable()" id="searchBox">
+  <div class="sep"></div>
+  <div class="control-group">
+    <span class="control-label">Priority</span>
+    <button class="filter-btn active" data-priority="all" onclick="setPriority('all', this)">All</button>
+    <button class="filter-btn" data-priority="high" onclick="setPriority('high', this)">High</button>
+    <button class="filter-btn" data-priority="medium" onclick="setPriority('medium', this)">Medium</button>
+    <button class="filter-btn" data-priority="low" onclick="setPriority('low', this)">Low</button>
+  </div>
+  <div class="sep"></div>
+  <div class="control-group">
+    <span class="control-label">Posted</span>
+    <button class="age-btn active" data-age="all" onclick="setAge('all', this)">All</button>
+    <button class="age-btn" data-age="1" onclick="setAge('1', this)">Today</button>
+    <button class="age-btn" data-age="3" onclick="setAge('3', this)">3 Days</button>
+    <button class="age-btn" data-age="7" onclick="setAge('7', this)">1 Week</button>
+    <button class="age-btn" data-age="14" onclick="setAge('14', this)">2 Weeks</button>
+    <button class="age-btn" data-age="30" onclick="setAge('30', this)">1 Month</button>
+  </div>
+  <span class="filter-count" id="filterCount"></span>
+</div>
+
+<div class="table-wrap">
+
+<table id="jobTable">
+<thead>
+  <tr>
+    <th onclick="sortTable(0)">Score <span class="arrow"></span></th>
+    <th onclick="sortTable(1)">Priority <span class="arrow"></span></th>
+    <th onclick="sortTable(2)">Title <span class="arrow"></span></th>
+    <th onclick="sortTable(3)">Company <span class="arrow"></span></th>
+    <th onclick="sortTable(4)">Salary <span class="arrow"></span></th>
+    <th onclick="sortTable(5)">Location <span class="arrow"></span></th>
+    <th onclick="sortTable(6)">Posted <span class="arrow"></span></th>
+    <th onclick="sortTable(7)">Source <span class="arrow"></span></th>
+    <th>Summary</th>
+  </tr>
+</thead>
+<tbody>
+  <tr data-priority="medium" data-posted="2026-08-12T00:47:35.516607+00:00">
+    <td data-sort="65" class="score">65</td>
+    <td data-sort="1" class="priority-medium">medium</td>
+    <td><a href="https://builtin.com/job/sr-manager-customer-success/10239685" target="_blank" class="job-title">Sr. Manager, Customer Success</a></td>
+    <td class="company">FourKites</td>
+    <td data-sort="145000" class="salary">$145,000&ndash;$175,000</td>
+    <td>2 Locations</td>
+    <td data-sort="2026-08-12T00:47:35.516607+00:00" class="age">17h ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary">This role aligns with the candidate&#x27;s experience as an Application Support Manager and their focus on scaling support operations. The salary range is slightly below the candidate’s floor, but the responsibilities seem adjacent to their skillset.</td>
+  </tr>
+  <tr data-priority="medium" data-posted="2026-08-12T17:47:41.402539+00:00">
+    <td data-sort="56" class="score">56</td>
+    <td data-sort="1" class="priority-medium">medium</td>
+    <td><a href="https://builtin.com/job/technical-implementation-manager/10622059" target="_blank" class="job-title">Technical Implementation Manager</a></td>
+    <td class="company">Odyssey (withodyssey)</td>
+    <td data-sort="130000" class="salary">$130,000&ndash;$160,000</td>
+    <td>US</td>
+    <td data-sort="2026-08-12T17:47:41.402539+00:00" class="age">Just now</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary">The listing describes a Technical Implementation Manager role, which shares some overlap with the candidate&#x27;s experience in Application Support and Operations leadership. However, it lacks specific details about the target industries or technical skills emphasized, making it a moderately suitable fit.</td>
+  </tr>
+  <tr data-priority="medium" data-posted="2026-08-12T00:47:36.623608+00:00">
+    <td data-sort="53" class="score">53</td>
+    <td data-sort="1" class="priority-medium">medium</td>
+    <td><a href="https://builtin.com/job/manager-solutions-engineering/10631906" target="_blank" class="job-title">Manager, Solutions Engineering</a></td>
+    <td class="company">Algolia</td>
+    <td data-sort="216000" class="salary">$216,000&ndash;$249,000</td>
+    <td>United States</td>
+    <td data-sort="2026-08-12T00:47:36.623608+00:00" class="age">17h ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary">The role as Solutions Engineer at Algolia aligns with the candidate&#x27;s experience in customer-facing operations leadership and technical expertise. However, the job description doesn’t fully leverage the candidate’s specific focus on application support and scaling support operations.</td>
+  </tr>
+  <tr data-priority="medium" data-posted="2026-08-10T17:47:35.518383+00:00">
+    <td data-sort="52" class="score">52</td>
+    <td data-sort="1" class="priority-medium">medium</td>
+    <td><a href="https://builtin.com/job/principal-customer-success-manager-veza/10610316" target="_blank" class="job-title">Principal Customer Success Manager - Veza</a></td>
+    <td class="company">ServiceNow</td>
+    <td data-sort="134000" class="salary">$134,000&ndash;$234,000</td>
+    <td>Waltham, MA, USA</td>
+    <td data-sort="2026-08-10T17:47:35.518383+00:00" class="age">2 days ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary">This role as Principal Customer Success Manager at ServiceNow aligns with the candidate&#x27;s experience in scaling support operations and customer success leadership. However, the title and focus on broader CSM responsibilities differ from the candidate’s specific background in application support management and deep technical troubleshooting.</td>
+  </tr>
+  <tr data-priority="medium" data-posted="2026-08-12T00:47:43.243079+00:00">
+    <td data-sort="51" class="score">51</td>
+    <td data-sort="1" class="priority-medium">medium</td>
+    <td><a href="https://builtin.com/job/client-services-director/10247900" target="_blank" class="job-title">Client Services Director</a></td>
+    <td class="company">Nucleus Global</td>
+    <td data-sort="145000" class="salary">$145,000&ndash;$185,000</td>
+    <td>United States</td>
+    <td data-sort="2026-08-12T00:47:43.243079+00:00" class="age">17h ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary">The role as Client Services Director doesn&#x27;t directly align with the candidate’s experience in Application Support Management and deep technical expertise. While the salary is competitive, the job description lacks specific details about the required skills and responsibilities.</td>
+  </tr>
+  <tr data-priority="medium" data-posted="2026-08-06T17:47:36.622848+00:00">
+    <td data-sort="50" class="score">50</td>
+    <td data-sort="1" class="priority-medium">medium</td>
+    <td><a href="https://builtin.com/job/senior-solutions-engineering-manager-product-specialist/10560356" target="_blank" class="job-title">Senior Solutions Engineering Manager, Product Specialist</a></td>
+    <td class="company">Motive</td>
+    <td data-sort="210000" class="salary">$210,000&ndash;$260,000</td>
+    <td>United States</td>
+    <td data-sort="2026-08-06T17:47:36.622848+00:00" class="age">6 days ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary">The listing describes a Solutions Engineering Manager role, which has some adjacent overlap with the candidate&#x27;s experience as an Application Support Manager. However, the compensation is significantly below the candidate’s floor of $130,000.</td>
+  </tr>
+  <tr data-priority="medium" data-posted="2026-08-10T23:48:18+00:00">
+    <td data-sort="50" class="score">50</td>
+    <td data-sort="1" class="priority-medium">medium</td>
+    <td><a href="https://www.themuse.com/jobs/samsarainc/manager-i-customer-success-manager" target="_blank" class="job-title">Manager I, Customer Success Manager</a></td>
+    <td class="company">Samsara Inc.</td>
+    <td data-sort="134172" class="salary">$134,172&ndash;$173,635</td>
+    <td>Flexible / Remote</td>
+    <td data-sort="2026-08-10T23:48:18+00:00" class="age">1 day ago</td>
+    <td><span class="source-badge">themuse</span></td>
+    <td class="summary">This role aligns with the candidate&#x27;s experience as a Customer Success Manager and their focus on scaling support operations. However, the specific industries (transportation, manufacturing) are not a primary target compared to healthcare IT or cybersecurity.</td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-06T17:47:40.444906+00:00">
+    <td data-sort="45" class="score">45</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/staff-technical-support-engineer/10271085" target="_blank" class="job-title">Staff Technical Support Engineer (Web App)</a></td>
+    <td class="company">Horizon3.ai</td>
+    <td data-sort="117000" class="salary">$117,000&ndash;$145,000</td>
+    <td>US</td>
+    <td data-sort="2026-08-06T17:47:40.444906+00:00" class="age">6 days ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary">The role focuses on web app support, which has some overlap with the candidate&#x27;s skills in troubleshooting and technical support. However, it lacks the strategic leadership and scaling experience highlighted in the candidate’s background.</td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-12T00:47:40.995372+00:00">
+    <td data-sort="45" class="score">45</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/customer-support-operations-intelligence-engineer/9226785" target="_blank" class="job-title">Customer Support Operations Intelligence Engineer</a></td>
+    <td class="company">Seeq</td>
+    <td data-sort="125000" class="salary">$125,000&ndash;$170,000</td>
+    <td>United States</td>
+    <td data-sort="2026-08-12T00:47:40.995372+00:00" class="age">17h ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary">The role involves operations intelligence, which aligns with the candidate&#x27;s experience in scaling support and process improvement. However, the title and description lack specific technical skills mentioned in the candidate’s profile.</td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-10T17:47:41.399845+00:00">
+    <td data-sort="43" class="score">43</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/implementation-manager/10603909" target="_blank" class="job-title">Implementation Manager</a></td>
+    <td class="company">OneImaging</td>
+    <td data-sort="110000" class="salary">$110,000&ndash;$135,000</td>
+    <td>USA</td>
+    <td data-sort="2026-08-10T17:47:41.399845+00:00" class="age">2 days ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary">The listing is for an Implementation Manager, which shares some overlap with the candidate&#x27;s experience in support operations and scaling teams. However, it lacks the specific focus on application support and deep technical expertise highlighted in the candidate’s profile.</td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-12T00:47:41.401387+00:00">
+    <td data-sort="43" class="score">43</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/senior-implementation-manager/9535651" target="_blank" class="job-title">Senior Implementation Manager</a></td>
+    <td class="company">Benepass</td>
+    <td data-sort="110000" class="salary">$110,000&ndash;$130,000</td>
+    <td>U.S.</td>
+    <td data-sort="2026-08-12T00:47:41.401387+00:00" class="age">17h ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary">The listing is for a Senior Implementation Manager, which shares some overlap with the candidate&#x27;s experience as an Application Support Manager. However, the salary range and job description focus on implementation rather than the candidate’s broader operational leadership and troubleshooting skills.</td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-12T17:47:42.137407+00:00">
+    <td data-sort="43" class="score">43</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/senior-manager-customer-experience/10630997" target="_blank" class="job-title">Senior Manager, Customer Experience</a></td>
+    <td class="company">Ethos</td>
+    <td data-sort="122000" class="salary">$122,000&ndash;$170,000</td>
+    <td>US</td>
+    <td data-sort="2026-08-12T17:47:42.137407+00:00" class="age">Just now</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary">The role is a Senior Manager of Customer Experience, which has some adjacent responsibilities to the candidate&#x27;s background in support operations leadership. However, it doesn’t align with the candidate’s specific technical skills or target industries.</td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-12T00:47:35.515639+00:00">
+    <td data-sort="42" class="score">42</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/customer-success-manager/8942385" target="_blank" class="job-title">Customer Success Manager</a></td>
+    <td class="company">Eve</td>
+    <td data-sort="120000" class="salary">$120,000&ndash;$165,000</td>
+    <td>United States</td>
+    <td data-sort="2026-08-12T00:47:35.515639+00:00" class="age">17h ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary">The role is a Customer Success Manager, which has some adjacent responsibilities to the candidate&#x27;s experience as an Application Support Manager. However, the salary range is significantly below the candidate’s floor of $130,000.</td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-12T17:47:42.137745+00:00">
+    <td data-sort="42" class="score">42</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/customer-experience-program-manager-west-region/10618181" target="_blank" class="job-title">Customer Experience, Program Manager | West Region</a></td>
+    <td class="company">iRhythm Technologies</td>
+    <td data-sort="115000" class="salary">$115,000&ndash;$149,000</td>
+    <td>4 Locations</td>
+    <td data-sort="2026-08-12T17:47:42.137745+00:00" class="age">Just now</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary">The role focuses on customer experience program management, which has limited overlap with the candidate&#x27;s background in application support and operational leadership. The salary range is significantly below the candidate’s $130k floor.</td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-06T17:47:42.770774+00:00">
+    <td data-sort="42" class="score">42</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/platform-professional-services-senior-consultant-ai-remote/10071599" target="_blank" class="job-title">Platform Professional Services Sr. Consultant, NG-SIEM (Remote)</a></td>
+    <td class="company">CrowdStrike</td>
+    <td data-sort="115000" class="salary">$115,000&ndash;$160,000</td>
+    <td>USA</td>
+    <td data-sort="2026-08-06T17:47:42.770774+00:00" class="age">6 days ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary">This role focuses on NG-SIEM consulting, which has limited overlap with the candidate&#x27;s experience in application support and scaling complex support operations. The salary is significantly below the candidate’s floor.</td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-12T00:47:41.402213+00:00">
+    <td data-sort="36" class="score">36</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/implementation-manager/8496464" target="_blank" class="job-title">Implementation Manager</a></td>
+    <td class="company">Invoca</td>
+    <td data-sort="77000" class="salary">$77,000&ndash;$950,000</td>
+    <td>13 Locations</td>
+    <td data-sort="2026-08-12T00:47:41.402213+00:00" class="age">17h ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary">The listing is for an Implementation Manager, which shares some overlap with the candidate&#x27;s experience in support operations and scaling teams. However, it doesn’t align with their target roles of Application Support Manager or Technical Account Manager, nor does it utilize their extensive technical skills.</td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-12T17:47:35.517896+00:00">
+    <td data-sort="30" class="score">30</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/customer-success-manager-docs/10406506" target="_blank" class="job-title">Customer Success Manager, Docs</a></td>
+    <td class="company">Superhuman</td>
+    <td data-sort="130000" class="salary">$130,000&ndash;$200,000</td>
+    <td>United States</td>
+    <td data-sort="2026-08-12T17:47:35.517896+00:00" class="age">Just now</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary">This role is partially aligned with the candidate&#x27;s background as a Customer Success Manager, but lacks specific details about technical support or application management. The salary range aligns with the candidate’s floor.</td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-08T17:47:35.519435+00:00">
+    <td data-sort="29" class="score">29</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/senior-director-customer-success/8905121" target="_blank" class="job-title">Customer Success Manager - Supply</a></td>
+    <td class="company">Zeta Global</td>
+    <td data-sort="150000" class="salary">$150,000&ndash;$165,000</td>
+    <td>United States</td>
+    <td data-sort="2026-08-08T17:47:35.519435+00:00" class="age">4 days ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary">This role is partially aligned with the candidate&#x27;s experience as a Customer Success Manager, but lacks specific details about the industry or technical skills highlighted in their target roles. The compensation falls below the candidate’s floor.</td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-05T17:47:36.625127+00:00">
+    <td data-sort="24" class="score">24</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/technical-product-owner-ai-native-solutions-engineering/10549417" target="_blank" class="job-title">Technical Product Owner, AI-Native Solutions Engineering</a></td>
+    <td class="company">Libra Solutions</td>
+    <td data-sort="0" class="salary"></td>
+    <td>United States</td>
+    <td data-sort="2026-08-05T17:47:36.625127+00:00" class="age">1 week ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary">This listing is a poor fit due to the title and description focusing on product ownership rather than the candidate&#x27;s experience as an Application Support Manager. The lack of specified technical domain alignment further reduces its relevance.</td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-12T00:47:41.401873+00:00">
+    <td data-sort="24" class="score">24</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/sr-implementation-manager/9216742" target="_blank" class="job-title">Sr. Implementation Manager</a></td>
+    <td class="company">AssistIQ</td>
+    <td data-sort="0" class="salary"></td>
+    <td>5 Locations</td>
+    <td data-sort="2026-08-12T00:47:41.401873+00:00" class="age">17h ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary">The listing is for a Sr. Implementation Manager, which has limited overlap with the candidate&#x27;s target roles and skills as an Application Support Manager with deep technical expertise. The salary range of $0-$0 presents a significant compensation mismatch.</td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-12T00:47:41.402028+00:00">
+    <td data-sort="24" class="score">24</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/implementation-manager/9856245" target="_blank" class="job-title">Implementation Manager</a></td>
+    <td class="company">Infinitus Systems, Inc.</td>
+    <td data-sort="0" class="salary"></td>
+    <td>USA</td>
+    <td data-sort="2026-08-12T00:47:41.402028+00:00" class="age">17h ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary">The listing is for an Implementation Manager, which shares some overlap with the candidate&#x27;s adjacent roles but lacks a strong alignment with their experience as an Application Support Manager focused on complex technical environments. The salary range is also significantly below the candidate’s floor.</td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-10T17:47:41.402862+00:00">
+    <td data-sort="24" class="score">24</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/implementation-manager/9739501" target="_blank" class="job-title">Implementation Manager</a></td>
+    <td class="company">ArboStar</td>
+    <td data-sort="0" class="salary"></td>
+    <td>United States</td>
+    <td data-sort="2026-08-10T17:47:41.402862+00:00" class="age">2 days ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary">This listing is a partial fit as it describes an Implementation Manager role, which shares some responsibilities with the candidate&#x27;s experience in support operations. However, the description lacks specific details about the target industry or technical skills that align with the candidate’s expertise.</td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-09T17:47:41.403197+00:00">
+    <td data-sort="24" class="score">24</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/implementation-manager/9902488" target="_blank" class="job-title">Implementation Manager</a></td>
+    <td class="company">Purple Unicorn</td>
+    <td data-sort="0" class="salary"></td>
+    <td>United States</td>
+    <td data-sort="2026-08-09T17:47:41.403197+00:00" class="age">3 days ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary">This listing is a partial fit as it describes an Implementation Manager role, which shares some responsibilities with the candidate&#x27;s experience in support operations. However, the job description lacks specific details about the industry or technical skills that align with the candidate’s target areas.</td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-12T00:47:42.137235+00:00">
+    <td data-sort="24" class="score">24</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/vp-executive-partner/9856894" target="_blank" class="job-title">VP, Executive Partner - Customer Experience</a></td>
+    <td class="company">Forrester</td>
+    <td data-sort="162000" class="salary">$162,000&ndash;$339,000</td>
+    <td>7 Locations</td>
+    <td data-sort="2026-08-12T00:47:42.137235+00:00" class="age">17h ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary">This role is a high-level executive position focused on customer experience strategy and consulting, not directly aligned with the candidate&#x27;s Application Support Manager background or technical skills. The compensation significantly exceeds the candidate’s salary floor.</td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-07T17:47:43.245897+00:00">
+    <td data-sort="20" class="score">20</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/private-wealth-client-services-manager-west-coast/10392356" target="_blank" class="job-title">Private Wealth, Client Services Manager (West Coast)</a></td>
+    <td class="company">Citizens</td>
+    <td data-sort="112000" class="salary">$112,000&ndash;$168,000</td>
+    <td>2 Locations</td>
+    <td data-sort="2026-08-07T17:47:43.245897+00:00" class="age">5 days ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-12T17:47:43.243396+00:00">
+    <td data-sort="18" class="score">18</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/tax-director-pcs-private-client-services/10631469" target="_blank" class="job-title">Tax Director - (PCS) Private Client Services</a></td>
+    <td class="company">BPM LLP</td>
+    <td data-sort="180000" class="salary">$180,000&ndash;$220,000</td>
+    <td>13 Locations</td>
+    <td data-sort="2026-08-12T17:47:43.243396+00:00" class="age">Just now</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary">This listing is completely unrelated to the candidate&#x27;s target roles and skills. The title of Tax Director indicates a vastly different industry and skillset compared to the candidate’s experience in application support and technical operations.</td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-11T19:50:22+00:00">
+    <td data-sort="15" class="score">15</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://www.themuse.com/jobs/autodesk/customer-success-advisor-asean-ad7591" target="_blank" class="job-title">Customer Success Advisor - ASEAN</a></td>
+    <td class="company">Autodesk</td>
+    <td data-sort="0" class="salary"></td>
+    <td>Flexible / Remote</td>
+    <td data-sort="2026-08-11T19:50:22+00:00" class="age">22h ago</td>
+    <td><span class="source-badge">themuse</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-05T18:40:02+00:00">
+    <td data-sort="14" class="score">14</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://www.themuse.com/jobs/gitlab/customer-success-architect-ceur" target="_blank" class="job-title">Customer Success Architect, CEUR</a></td>
+    <td class="company">GitLab</td>
+    <td data-sort="0" class="salary"></td>
+    <td>Flexible / Remote</td>
+    <td data-sort="2026-08-05T18:40:02+00:00" class="age">6 days ago</td>
+    <td><span class="source-badge">themuse</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-12T12:08:24+00:00">
+    <td data-sort="12" class="score">12</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://jobicy.com/jobs/150551-director-business-operations-customer-success" target="_blank" class="job-title">Director, Business Operations - Customer Success</a></td>
+    <td class="company">Zscaler</td>
+    <td data-sort="0" class="salary"></td>
+    <td>USA</td>
+    <td data-sort="2026-08-12T12:08:24+00:00" class="age">5h ago</td>
+    <td><span class="source-badge">jobicy</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-09T03:28:44+00:00">
+    <td data-sort="12" class="score">12</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://jobicy.com/jobs/150332-sr-director-strategy-operations-customer-success" target="_blank" class="job-title">Sr. Director, Strategy &amp; Operations - Customer Success</a></td>
+    <td class="company">Zscaler</td>
+    <td data-sort="0" class="salary"></td>
+    <td>USA</td>
+    <td data-sort="2026-08-09T03:28:44+00:00" class="age">3 days ago</td>
+    <td><span class="source-badge">jobicy</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-07T05:45:07+00:00">
+    <td data-sort="12" class="score">12</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://jobicy.com/jobs/150022-senior-customer-success-manager-4" target="_blank" class="job-title">Senior Customer Success Manager</a></td>
+    <td class="company">Twilio</td>
+    <td data-sort="0" class="salary"></td>
+    <td>USA</td>
+    <td data-sort="2026-08-07T05:45:07+00:00" class="age">5 days ago</td>
+    <td><span class="source-badge">jobicy</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-12T17:47:35.160199+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/it-application-support-analyst-level-3-support/10625974" target="_blank" class="job-title">IT Application Support Analyst (Level 3 Support)</a></td>
+    <td class="company">Iron Mountain</td>
+    <td data-sort="0" class="salary"></td>
+    <td>2 Locations</td>
+    <td data-sort="2026-08-12T17:47:35.160199+00:00" class="age">Just now</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-12T17:47:35.160400+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/senior-application-support-engineer-sre/10618838" target="_blank" class="job-title">Senior Application Support Engineer (SRE)</a></td>
+    <td class="company">The Depository Trust &amp; Clearing Corporation (DTCC)</td>
+    <td data-sort="0" class="salary"></td>
+    <td>2 Locations</td>
+    <td data-sort="2026-08-12T17:47:35.160400+00:00" class="age">Just now</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-10T17:47:35.160992+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/application-support-specialist/10603616" target="_blank" class="job-title">Application Support Specialist</a></td>
+    <td class="company">Symbiotic Group Inc.</td>
+    <td data-sort="0" class="salary"></td>
+    <td>5 Locations</td>
+    <td data-sort="2026-08-10T17:47:35.160992+00:00" class="age">2 days ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-05T17:47:35.162366+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/application-support-analyst-intermediate/10534414" target="_blank" class="job-title">Application Support Analyst - Intermediate</a></td>
+    <td class="company">Baptist Health</td>
+    <td data-sort="0" class="salary"></td>
+    <td>2 Locations</td>
+    <td data-sort="2026-08-05T17:47:35.162366+00:00" class="age">1 week ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-12T00:47:35.516032+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/implementation-consultant/7101287" target="_blank" class="job-title">Senior Customer Success Manager</a></td>
+    <td class="company">LinkSquares</td>
+    <td data-sort="105000" class="salary">$105,000+</td>
+    <td>Boston, MA, USA</td>
+    <td data-sort="2026-08-12T00:47:35.516032+00:00" class="age">17h ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-12T17:47:35.516983+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/strategic-accounts-customer-success-manager-csm-ic/10229786" target="_blank" class="job-title">Strategic Accounts Customer Success Manager (CSM IC)</a></td>
+    <td class="company">Motive</td>
+    <td data-sort="98000" class="salary">$98,000&ndash;$165,000</td>
+    <td>United States</td>
+    <td data-sort="2026-08-12T17:47:35.516983+00:00" class="age">Just now</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-12T17:47:35.517173+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/client-success-manager-hospital-solutions/10624780" target="_blank" class="job-title">Client Success Manager, Hospital Solutions</a></td>
+    <td class="company">Doximity</td>
+    <td data-sort="91000" class="salary">$91,000&ndash;$138,000</td>
+    <td>2 Locations</td>
+    <td data-sort="2026-08-12T17:47:35.517173+00:00" class="age">Just now</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-10T17:47:35.518532+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/customer-success-manager-engineering-services-platforms-esp/10600207" target="_blank" class="job-title">Customer Success Manager - Engineering Services &amp; Platforms (ESP)</a></td>
+    <td class="company">JPMorganChase</td>
+    <td data-sort="0" class="salary"></td>
+    <td>4 Locations</td>
+    <td data-sort="2026-08-10T17:47:35.518532+00:00" class="age">2 days ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-12T00:47:37.292120+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/vp-technical-account-management/10632288" target="_blank" class="job-title">VP Technical Account Management</a></td>
+    <td class="company">Vega (vega.io)</td>
+    <td data-sort="0" class="salary"></td>
+    <td>US</td>
+    <td data-sort="2026-08-12T00:47:37.292120+00:00" class="age">17h ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-09T17:47:38.551737+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/gtm-enablement-technical-partners/10594123" target="_blank" class="job-title">GTM Technical Enablement Partner</a></td>
+    <td class="company">Lovable</td>
+    <td data-sort="0" class="salary"></td>
+    <td>3 Locations</td>
+    <td data-sort="2026-08-09T17:47:38.551737+00:00" class="age">3 days ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-07T17:47:39.209635+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/helpdesk-manager/10584226" target="_blank" class="job-title">Helpdesk Manager</a></td>
+    <td class="company">Wycliffe Bible Translators USA</td>
+    <td data-sort="0" class="salary"></td>
+    <td>7 Locations</td>
+    <td data-sort="2026-08-07T17:47:39.209635+00:00" class="age">5 days ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-10T17:47:40.096640+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/technical-support-manager/10604986" target="_blank" class="job-title">Technical Support Manager</a></td>
+    <td class="company">Precisely</td>
+    <td data-sort="0" class="salary"></td>
+    <td>United States</td>
+    <td data-sort="2026-08-10T17:47:40.096640+00:00" class="age">2 days ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-12T00:47:40.442026+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/technical-support-engineer/9853791" target="_blank" class="job-title">Technical Support Engineer</a></td>
+    <td class="company">Jama Software</td>
+    <td data-sort="0" class="salary"></td>
+    <td>2 Locations</td>
+    <td data-sort="2026-08-12T00:47:40.442026+00:00" class="age">17h ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-12T00:47:40.442390+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/technical-support-engineer-amer-west/10241331" target="_blank" class="job-title">Technical Support Engineer, AMER West</a></td>
+    <td class="company">Akuity</td>
+    <td data-sort="0" class="salary"></td>
+    <td>United States</td>
+    <td data-sort="2026-08-12T00:47:40.442390+00:00" class="age">17h ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-06T17:47:40.445083+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/technical-support-engineer-remote/10291862" target="_blank" class="job-title">Technical Support Engineer- (Remote)</a></td>
+    <td class="company">GE Vernova</td>
+    <td data-sort="87000" class="salary">$87,000&ndash;$145,000</td>
+    <td>USA</td>
+    <td data-sort="2026-08-06T17:47:40.445083+00:00" class="age">6 days ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-12T00:47:42.136126+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/customer-experience-leader-general-interest/9218446" target="_blank" class="job-title">Customer Experience Leader  (General Interest)</a></td>
+    <td class="company">Conscious Talent</td>
+    <td data-sort="0" class="salary"></td>
+    <td>United States</td>
+    <td data-sort="2026-08-12T00:47:42.136126+00:00" class="age">17h ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-12T00:47:42.136310+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/manager-customer-experience-technology/10245707" target="_blank" class="job-title">Manager, Customer Experience Technology</a></td>
+    <td class="company">Cable ONE</td>
+    <td data-sort="0" class="salary"></td>
+    <td>2 Locations</td>
+    <td data-sort="2026-08-12T00:47:42.136310+00:00" class="age">17h ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-12T00:47:42.136511+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/customer-success-manager-ad-tech-experience-required/10247757" target="_blank" class="job-title">Customer Success Manager- Ad Tech Experience Required</a></td>
+    <td class="company">Freestar</td>
+    <td data-sort="0" class="salary"></td>
+    <td>USA</td>
+    <td data-sort="2026-08-12T00:47:42.136511+00:00" class="age">17h ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-12T00:47:42.136872+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/customer-experience-engineer-cxe-t/9857979" target="_blank" class="job-title">Customer Experience Engineer, CXE-T</a></td>
+    <td class="company">Docker, Inc</td>
+    <td data-sort="0" class="salary"></td>
+    <td>2 Locations</td>
+    <td data-sort="2026-08-12T00:47:42.136872+00:00" class="age">17h ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-10T17:47:42.138763+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/customer-experience-specialist/10607965" target="_blank" class="job-title">Customer Experience Specialist</a></td>
+    <td class="company">Omnidian</td>
+    <td data-sort="0" class="salary"></td>
+    <td>US</td>
+    <td data-sort="2026-08-10T17:47:42.138763+00:00" class="age">2 days ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-09T17:47:43.244855+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/client-services-specialist/10189594" target="_blank" class="job-title">Client Services Specialist (Remote)</a></td>
+    <td class="company">CBIZ</td>
+    <td data-sort="0" class="salary"></td>
+    <td>2 Locations</td>
+    <td data-sort="2026-08-09T17:47:43.244855+00:00" class="age">3 days ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-07T17:47:43.246046+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/client-services-representative/10252515" target="_blank" class="job-title">Client Services Representative</a></td>
+    <td class="company">Norgress</td>
+    <td data-sort="0" class="salary"></td>
+    <td>United States</td>
+    <td data-sort="2026-08-07T17:47:43.246046+00:00" class="age">5 days ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-06T17:47:43.246210+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/client-services-representative/10565077" target="_blank" class="job-title">Client Services Representative</a></td>
+    <td class="company">VerifiedFirst</td>
+    <td data-sort="0" class="salary"></td>
+    <td>United States</td>
+    <td data-sort="2026-08-06T17:47:43.246210+00:00" class="age">6 days ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-06T17:47:43.246546+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/senior-client-services-specialist/10557367" target="_blank" class="job-title">Senior Client Services Specialist</a></td>
+    <td class="company">PlanITROI</td>
+    <td data-sort="0" class="salary"></td>
+    <td>USA</td>
+    <td data-sort="2026-08-06T17:47:43.246546+00:00" class="age">6 days ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-06T17:47:43.246702+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://builtin.com/job/client-services-specialist-monday-friday-12-9pm-est/10556584" target="_blank" class="job-title">Client Services Specialist (Monday-Friday, 12-9PM EST)</a></td>
+    <td class="company">BHG Financial</td>
+    <td data-sort="0" class="salary"></td>
+    <td>United States</td>
+    <td data-sort="2026-08-06T17:47:43.246702+00:00" class="age">6 days ago</td>
+    <td><span class="source-badge">builtin</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-11T11:09:39+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://jobicy.com/jobs/150481-senior-customer-success-manager-k12" target="_blank" class="job-title">Senior Customer Success Manager, K12</a></td>
+    <td class="company">Instructure</td>
+    <td data-sort="0" class="salary"></td>
+    <td>USA</td>
+    <td data-sort="2026-08-11T11:09:39+00:00" class="age">1 day ago</td>
+    <td><span class="source-badge">jobicy</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-11T11:09:28+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://jobicy.com/jobs/150474-director-of-customer-success-operations" target="_blank" class="job-title">Director of Customer Success Operations</a></td>
+    <td class="company">Securly</td>
+    <td data-sort="0" class="salary"></td>
+    <td>USA</td>
+    <td data-sort="2026-08-11T11:09:28+00:00" class="age">1 day ago</td>
+    <td><span class="source-badge">jobicy</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-09T03:29:01+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://jobicy.com/jobs/150343-customer-success-engineer" target="_blank" class="job-title">Customer Success Engineer</a></td>
+    <td class="company">Zero Networks</td>
+    <td data-sort="0" class="salary"></td>
+    <td>USA</td>
+    <td data-sort="2026-08-09T03:29:01+00:00" class="age">3 days ago</td>
+    <td><span class="source-badge">jobicy</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-09T03:28:58+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://jobicy.com/jobs/150341-manager-customer-success-operations" target="_blank" class="job-title">Manager, Customer Success Operations</a></td>
+    <td class="company">AlphaSense</td>
+    <td data-sort="0" class="salary"></td>
+    <td>USA</td>
+    <td data-sort="2026-08-09T03:28:58+00:00" class="age">3 days ago</td>
+    <td><span class="source-badge">jobicy</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-09T03:28:55+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://jobicy.com/jobs/150339-senior-analyst-customer-success-operations" target="_blank" class="job-title">Senior Analyst, Customer Success Operations</a></td>
+    <td class="company">AlphaSense</td>
+    <td data-sort="0" class="salary"></td>
+    <td>USA</td>
+    <td data-sort="2026-08-09T03:28:55+00:00" class="age">3 days ago</td>
+    <td><span class="source-badge">jobicy</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-06T16:12:44+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://jobicy.com/jobs/150280-sr-customer-success-engineer" target="_blank" class="job-title">Sr. Customer Success Engineer</a></td>
+    <td class="company">Veeam Software</td>
+    <td data-sort="0" class="salary"></td>
+    <td>USA</td>
+    <td data-sort="2026-08-06T16:12:44+00:00" class="age">6 days ago</td>
+    <td><span class="source-badge">jobicy</span></td>
+    <td class="summary"></td>
+  </tr>
+  <tr data-priority="low" data-posted="2026-08-06T06:30:04+00:00">
+    <td data-sort="10" class="score">10</td>
+    <td data-sort="2" class="priority-low">low</td>
+    <td><a href="https://jobicy.com/jobs/148752-paid-media-strategist-ppc-seo-client-success" target="_blank" class="job-title">Paid Media Strategist - PPC &amp; SEO Client Success</a></td>
+    <td class="company">Gannett</td>
+    <td data-sort="0" class="salary"></td>
+    <td>USA</td>
+    <td data-sort="2026-08-06T06:30:04+00:00" class="age">6 days ago</td>
+    <td><span class="source-badge">jobicy</span></td>
+    <td class="summary"></td>
+  </tr>
+</tbody>
+</table>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const OLLAMA_URL = 'http://localhost:11434';
+const DEFAULT_MODEL = 'gemma3:4b';
+const jobData = [{"title": "Sr. Manager, Customer Success", "company": "FourKites", "description": "", "salary_min": 145000, "salary_max": 175000, "location": "2 Locations"}, {"title": "Technical Implementation Manager", "company": "Odyssey (withodyssey)", "description": "", "salary_min": 130000, "salary_max": 160000, "location": "US"}, {"title": "Manager, Solutions Engineering", "company": "Algolia", "description": "", "salary_min": 216000, "salary_max": 249000, "location": "United States"}, {"title": "Principal Customer Success Manager - Veza", "company": "ServiceNow", "description": "", "salary_min": 134000, "salary_max": 234000, "location": "Waltham, MA, USA"}, {"title": "Client Services Director", "company": "Nucleus Global", "description": "", "salary_min": 145000, "salary_max": 185000, "location": "United States"}, {"title": "Senior Solutions Engineering Manager, Product Specialist", "company": "Motive", "description": "", "salary_min": 210000, "salary_max": 260000, "location": "United States"}, {"title": "Manager I, Customer Success Manager", "company": "Samsara Inc.", "description": "Who we are Samsara (NYSE: IOT) is the pioneer of the Connected Operations\u2122 Cloud, which is a platform that enables organizations that depend on physical operations to harness Internet of Things (IoT) data to develop actionable insights and improve their operations. At Samsara, we are helping improve the safety, efficiency and sustainability of the physical operations that power our global economy. Representing more than 40% of global GDP, these industries are the infrastructure of our planet, including agriculture, construction, field services, transportation, and manufacturing \u2014 and we are excited to help digitally transform their operations at scale. Working at Samsara means you\u2019ll help define the future of physical operations and be on a team that\u2019s shaping an exciting array of product solutions, including Video-Based Safety, Vehicle Telematics, Apps and Driver Workflows, and Equipment Monitoring. As part of a recently public company, you\u2019ll have the autonomy and support to make an impact as we build for the long term. About the role: Samsara\u2019s Canada Scaled Customer Success team advises and guides our Scaled customer base, ensuring they implement and adopt Samsara, and continuously gain business value from our products using digital communications and self-serve resources. As the manager of the Scaled Customer Success team, you will improve our Scaled Customer Success motion, provide focused coaching for each team member, and be an inspiring leader who establishes an energizing team culture for the team. This is a remote position open to candidates residing in Canada. You should apply if: You want to impact the industries that run our world: Every phone call you answer and every email you send can affect whether truck drivers deliver goods on time and without accidents, whether students get dropped off safely from school, or whether power gets restored quickly after a natural disaster. You thrive the most when solving problems: Our constantly expanding technology and the complexities faced by our customers provide an exciting range of challenges for our Customer Success teams. With a growth mindset and a desire to learn, you will strategically partner with our customers to find unique solutions to help keep their operations safe, efficient, and sustainable. You are a natural relationship builder: Whether the relationship is with our customers or with cross-functional teams in Samsara, you are in constant communication and collaboration with key stakeholders to win as a team. You are the architect of your own career: If you put in the work, this role won\u2019t be your last at Samsara. This Customer Success team is still shaping its future and you will have plenty of autonomy and opportunities to master your craft in a hyper growth environment. You want to be with the best: At Samsara, we win together, celebrate together and support each other. You will be surrounded by the best and brightest professionals out there. In this role, you will: Hire, o", "salary_min": 134172, "salary_max": 173635, "location": "Flexible / Remote"}, {"title": "Staff Technical Support Engineer (Web App)", "company": "Horizon3.ai", "description": "", "salary_min": 117000, "salary_max": 145000, "location": "US"}, {"title": "Customer Support Operations Intelligence Engineer", "company": "Seeq", "description": "", "salary_min": 125000, "salary_max": 170000, "location": "United States"}, {"title": "Implementation Manager", "company": "OneImaging", "description": "", "salary_min": 110000, "salary_max": 135000, "location": "USA"}, {"title": "Senior Implementation Manager", "company": "Benepass", "description": "", "salary_min": 110000, "salary_max": 130000, "location": "U.S."}, {"title": "Senior Manager, Customer Experience", "company": "Ethos", "description": "", "salary_min": 122000, "salary_max": 170000, "location": "US"}, {"title": "Customer Success Manager", "company": "Eve", "description": "", "salary_min": 120000, "salary_max": 165000, "location": "United States"}, {"title": "Customer Experience, Program Manager | West Region", "company": "iRhythm Technologies", "description": "", "salary_min": 115000, "salary_max": 149000, "location": "4 Locations"}, {"title": "Platform Professional Services Sr. Consultant, NG-SIEM (Remote)", "company": "CrowdStrike", "description": "", "salary_min": 115000, "salary_max": 160000, "location": "USA"}, {"title": "Implementation Manager", "company": "Invoca", "description": "", "salary_min": 77000, "salary_max": 950000, "location": "13 Locations"}, {"title": "Customer Success Manager, Docs", "company": "Superhuman", "description": "", "salary_min": 130000, "salary_max": 200000, "location": "United States"}, {"title": "Customer Success Manager - Supply", "company": "Zeta Global", "description": "", "salary_min": 150000, "salary_max": 165000, "location": "United States"}, {"title": "Technical Product Owner, AI-Native Solutions Engineering", "company": "Libra Solutions", "description": "", "salary_min": 0, "salary_max": 0, "location": "United States"}, {"title": "Sr. Implementation Manager", "company": "AssistIQ", "description": "", "salary_min": 0, "salary_max": 0, "location": "5 Locations"}, {"title": "Implementation Manager", "company": "Infinitus Systems, Inc.", "description": "", "salary_min": 0, "salary_max": 0, "location": "USA"}, {"title": "Implementation Manager", "company": "ArboStar", "description": "", "salary_min": 0, "salary_max": 0, "location": "United States"}, {"title": "Implementation Manager", "company": "Purple Unicorn", "description": "", "salary_min": 0, "salary_max": 0, "location": "United States"}, {"title": "VP, Executive Partner - Customer Experience", "company": "Forrester", "description": "", "salary_min": 162000, "salary_max": 339000, "location": "7 Locations"}, {"title": "Private Wealth, Client Services Manager (West Coast)", "company": "Citizens", "description": "", "salary_min": 112000, "salary_max": 168000, "location": "2 Locations"}, {"title": "Tax Director - (PCS) Private Client Services", "company": "BPM LLP", "description": "", "salary_min": 180000, "salary_max": 220000, "location": "13 Locations"}, {"title": "Customer Success Advisor - ASEAN", "company": "Autodesk", "description": "Job Requisition ID # 26WD95701 Customer Success Advisor In the Customer Success Management organization, we transform customers' vision into realized value. We believe in consistent, connected customer experiences and forging trusted partnerships that fuel adoption, retention, and measurable business outcomes. Our work supports improved revenue and sustainable company growth. As we continue our business model transformation, driving adoption of our technology is key to long-term customer value and partnership. Position Overview: As a Customer Success Advisor you'll support customer outcomes by helping them realize more value of their Autodesk solutions. Your strong business acumen, curiosity mindset, and ability to quickly identify customer needs will allow you to create impactful experiences across the customer journey, while also shaping internal best practices. Our Customer Success team is a collaborative, driven, global organization devoted to providing world-class experiences for our customers. We're dedicated to helping our customers be successful with their Autodesk solutions so that they achieve their business goals, and we earn their loyalty. As a team member, you'll be empowered to challenge the status quo and shape how we scale success. Responsibilities: Use data triggered signals to proactively engage customers to align product capabilities with customer outcomes Establish adoption strategies to increase customer value and product usage Identify and engage at-risk accounts by using discovery skills and realign them toward success Collaborate cross-functionally with Sales, Renewals, Channel Partners, Support, and Services to support customer outcomes Deliver a high-quality experience that deepens customer satisfaction and loyalty Uncover and identify opportunities to expand customer relationships through value discovery and strategic conversations Preferred Qualifications: 5-7 years in Customer Success, Account Management, or a related customer-facing role Experience in AEC industry is an added advantage Proven track record of working independently while driving measurable impact. Experience navigating cross-functional collaboration with internal and external stakeholders Proficiency in Salesforce or similar CRM systems. Experience with SaaS, cloud-based software, or subscription business models. Familiarity with Autodesk customer industries (AEC, MFG, M&E) #LI-SV2 Learn More About Autodesk Welcome to Autodesk! Amazing things are created every day with our software - from the greenest buildings and cleanest cars to the smartest factories and biggest hit movies. We help innovators turn their ideas into reality, transforming not only how things are made, but what can be made. We take great pride in our culture here at Autodesk - it's at the core of everything we do. Our culture guides the way we work and treat each other, informs how we connect with customers and partners, and defines how we show up in the world. When you're an Autodeske", "salary_min": 0, "salary_max": 0, "location": "Flexible / Remote"}, {"title": "Customer Success Architect, CEUR", "company": "GitLab", "description": "GitLab is the intelligent orchestration platform for DevSecOps. GitLab enables organizations to increase developer productivity, improve operational efficiency, reduce security and compliance risk, and accelerate digital transformation. More than 50 million registered users and more than 50% of the Fortune 100* trust GitLab to ship better, more secure software faster. The same principles built into our products are reflected in how our team works: we embrace AI as a core productivity multiplier, with all team members expected to incorporate AI into their daily workflows to drive efficiency, innovation, and impact. GitLab is where careers accelerate, innovation flourishes, and every voice is valued. Our high-performance culture is driven by our values\u00a0and continuous knowledge exchange, enabling our team members to reach their full potential while collaborating with industry leaders to solve complex problems. Co-create the future with us as we build technology that transforms how the world develops software. * Fortune 500\u00ae is a registered trademark of Fortune Media IP Limited, used under license. Claim based on GitLab data. Fortune 100 refers to the top 20% ranked companies in the 2025 Fortune 500 list, published in June 2025. Fortune and Fortune Media IP Limited are not affiliated with, and do not endorse products or services of GitLab. The CSA role is a pivotal addition to our customer success team, focusing on building strong, consultative relationships with our key customers. Our CSAs will serve as trusted advisors, leveraging their deep understanding of DevSecOps best practices, industry trends and our software capabilities to help customers navigate complex challenges and achieve their desired outcomes. Additionally, our team serves as liaisons between the customer and the GitLab ecosystem, streamlining collaboration with Product Management, Engineering, Sales, Professional Services, and others. CSM handbook . What You\u2019ll Do Partner with our customers in taking what was established in the pre-sales command plan, and turning the customers desired positive business outcomes into actionable objectives Know the GitLab platform, our more common best practices, and use cases in order to guide the customer Understand the customer journey and be able to guide them on future adoption Act as the GitLab liaison for GitLab questions, issues, or escalations. Work with GitLab Support, Product Management (i.e., roadmaps), or other teams as needed Own a book of assigned customers, with a focus on increasing adoption, ensuring retention and growth, and overall customer satisfaction Remain knowledgeable and up-to-date on GitLab releases Provide immediate onboarding activities Work with assigned customers to build Customer Success Plans, establishing critical goals, or other key performance indicators and aid the customer in achieving their goals Program manage account escalations Provide insights with respect to the availability and applicability of new featur", "salary_min": 0, "salary_max": 0, "location": "Flexible / Remote"}, {"title": "Director, Business Operations - Customer Success", "company": "Zscaler", "description": "About Zscaler Zscaler accelerates digital transformation to ensure our customers can be more agile, efficient, resilient, and secure. As an AI-forward enterprise, we are constantly pushing the envelope, leveraging the world\u2019s largest security data lake to power our cloud-native Zero Trust Exchange platform. This innovation protects our customers from cyberattacks and data loss by securely&hellip;", "salary_min": 0, "salary_max": 0, "location": "USA"}, {"title": "Sr. Director, Strategy & Operations - Customer Success", "company": "Zscaler", "description": "About Zscaler Zscaler accelerates digital transformation to ensure our customers can be more agile, efficient, resilient, and secure. As an AI-forward enterprise, we are constantly pushing the envelope, leveraging the world\u2019s largest security data lake to power our cloud-native Zero Trust Exchange platform. This innovation protects our customers from cyberattacks and data loss by securely&hellip;", "salary_min": 0, "salary_max": 0, "location": "USA"}, {"title": "Senior Customer Success Manager", "company": "Twilio", "description": "Who we are\u00a0 At Twilio, we\u2019re shaping the future of communications, all from the comfort of our homes. We deliver innovative solutions to\u00a0hundreds of thousands of businesses\u00a0and empower millions of developers worldwide to craft personalized customer experiences. Our dedication to remote-first work, and strong culture of connection and global inclusion means that no matter your&hellip;", "salary_min": 0, "salary_max": 0, "location": "USA"}, {"title": "IT Application Support Analyst (Level 3 Support)", "company": "Iron Mountain", "description": "", "salary_min": 0, "salary_max": 0, "location": "2 Locations"}, {"title": "Senior Application Support Engineer (SRE)", "company": "The Depository Trust & Clearing Corporation (DTCC)", "description": "", "salary_min": 0, "salary_max": 0, "location": "2 Locations"}, {"title": "Application Support Specialist", "company": "Symbiotic Group Inc.", "description": "", "salary_min": 0, "salary_max": 0, "location": "5 Locations"}, {"title": "Application Support Analyst - Intermediate", "company": "Baptist Health", "description": "", "salary_min": 0, "salary_max": 0, "location": "2 Locations"}, {"title": "Senior Customer Success Manager", "company": "LinkSquares", "description": "", "salary_min": 105000, "salary_max": 0, "location": "Boston, MA, USA"}, {"title": "Strategic Accounts Customer Success Manager (CSM IC)", "company": "Motive", "description": "", "salary_min": 98000, "salary_max": 165000, "location": "United States"}, {"title": "Client Success Manager, Hospital Solutions", "company": "Doximity", "description": "", "salary_min": 91000, "salary_max": 138000, "location": "2 Locations"}, {"title": "Customer Success Manager - Engineering Services & Platforms (ESP)", "company": "JPMorganChase", "description": "", "salary_min": 0, "salary_max": 0, "location": "4 Locations"}, {"title": "VP Technical Account Management", "company": "Vega (vega.io)", "description": "", "salary_min": 0, "salary_max": 0, "location": "US"}, {"title": "GTM Technical Enablement Partner", "company": "Lovable", "description": "", "salary_min": 0, "salary_max": 0, "location": "3 Locations"}, {"title": "Helpdesk Manager", "company": "Wycliffe Bible Translators USA", "description": "", "salary_min": 0, "salary_max": 0, "location": "7 Locations"}, {"title": "Technical Support Manager", "company": "Precisely", "description": "", "salary_min": 0, "salary_max": 0, "location": "United States"}, {"title": "Technical Support Engineer", "company": "Jama Software", "description": "", "salary_min": 0, "salary_max": 0, "location": "2 Locations"}, {"title": "Technical Support Engineer, AMER West", "company": "Akuity", "description": "", "salary_min": 0, "salary_max": 0, "location": "United States"}, {"title": "Technical Support Engineer- (Remote)", "company": "GE Vernova", "description": "", "salary_min": 87000, "salary_max": 145000, "location": "USA"}, {"title": "Customer Experience Leader  (General Interest)", "company": "Conscious Talent", "description": "", "salary_min": 0, "salary_max": 0, "location": "United States"}, {"title": "Manager, Customer Experience Technology", "company": "Cable ONE", "description": "", "salary_min": 0, "salary_max": 0, "location": "2 Locations"}, {"title": "Customer Success Manager- Ad Tech Experience Required", "company": "Freestar", "description": "", "salary_min": 0, "salary_max": 0, "location": "USA"}, {"title": "Customer Experience Engineer, CXE-T", "company": "Docker, Inc", "description": "", "salary_min": 0, "salary_max": 0, "location": "2 Locations"}, {"title": "Customer Experience Specialist", "company": "Omnidian", "description": "", "salary_min": 0, "salary_max": 0, "location": "US"}, {"title": "Client Services Specialist (Remote)", "company": "CBIZ", "description": "", "salary_min": 0, "salary_max": 0, "location": "2 Locations"}, {"title": "Client Services Representative", "company": "Norgress", "description": "", "salary_min": 0, "salary_max": 0, "location": "United States"}, {"title": "Client Services Representative", "company": "VerifiedFirst", "description": "", "salary_min": 0, "salary_max": 0, "location": "United States"}, {"title": "Senior Client Services Specialist", "company": "PlanITROI", "description": "", "salary_min": 0, "salary_max": 0, "location": "USA"}, {"title": "Client Services Specialist (Monday-Friday, 12-9PM EST)", "company": "BHG Financial", "description": "", "salary_min": 0, "salary_max": 0, "location": "United States"}, {"title": "Senior Customer Success Manager, K12", "company": "Instructure", "description": "At Instructure, we believe in the power of people to grow and succeed throughout their lives. Our goal is to amplify that power by creating intuitive products that simplify learning and personal development, facilitate meaningful relationships, and inspire people to go further in their education and careers.We do this by giving smart, creative, passionate people&hellip;", "salary_min": 0, "salary_max": 0, "location": "USA"}, {"title": "Director of Customer Success Operations", "company": "Securly", "description": "About SecurlySecurly is the K-12 market leader in AI-powered student safety and wellness solutions, protecting more than 20 million students across 20,000+ schools. Our mission is to create safer, more supportive learning environments by detecting potential harm, supporting student mental health, and empowering educators with actionable insights that help students thrive.By turning data into meaningful,&hellip;", "salary_min": 0, "salary_max": 0, "location": "USA"}, {"title": "Customer Success Engineer", "company": "Zero Networks", "description": "DescriptionZero Networks is looking for a dedicated and customer-focused Customer Success Engineer to join our team. In this role, you will be responsible for ensuring that our customers derive maximum value from our products post-purchase. You will act as a vital link between our technical teams and customers, providing training, deployment support, and ongoing engagement&hellip;", "salary_min": 0, "salary_max": 0, "location": "USA"}, {"title": "Manager, Customer Success Operations", "company": "AlphaSense", "description": "About AlphaSense:\u00a0 The world\u2019s most sophisticated companies rely on AlphaSense to remove uncertainty from decision-making. With market intelligence and search built on proven AI, AlphaSense delivers insights that matter from content you can trust. Our universe of public and private content includes equity research, company filings, event transcripts, expert calls, news, trade journals, and clients\u2019&hellip;", "salary_min": 0, "salary_max": 0, "location": "USA"}, {"title": "Senior Analyst, Customer Success Operations", "company": "AlphaSense", "description": "About AlphaSense:\u00a0 The world\u2019s most sophisticated companies rely on AlphaSense to remove uncertainty from decision-making. With market intelligence and search built on proven AI, AlphaSense delivers insights that matter from content you can trust. Our universe of public and private content includes equity research, company filings, event transcripts, expert calls, news, trade journals, and clients\u2019&hellip;", "salary_min": 0, "salary_max": 0, "location": "USA"}, {"title": "Sr. Customer Success Engineer", "company": "Veeam Software", "description": "Veeam is the Data and AI Trust Company, specializing in helping organizations ensure their data and AI are fully understood, secured, and resilient to enable the acceleration of safe AI at scale. As the market leader in both data resilience and data security posture management, Veeam is built for the convergence of identity, data, security,&hellip;", "salary_min": 0, "salary_max": 0, "location": "USA"}, {"title": "Paid Media Strategist - PPC & SEO Client Success", "company": "Gannett", "description": "|Current USA TODAY Co. Employees- Please ensure you are using our abbreviated process on the internal Careers site by logging into Dayforce through MyApps|USA TODAY Co., Inc. is a diversified media company with expansive reach at the national and local level dedicated to empowering and enriching communities. We seek to inspire, inform, and connect audiences&hellip;", "salary_min": 0, "salary_max": 0, "location": "USA"}];
+const DEFAULT_PROFILE = {"resume_summary": "\nTechnical Competencies\nSystem Administration: Active Directory \u2022 Excel \u2022 Storage \u2022 Linux \u2022 Networking \u2022 Docker \u2022 Git \u2022 MacOS \u2022 Windows \u2022 Linux \u2022 Network Administration \u2022 Troubleshooting \u2022 Process Improvement \u2022 SSO \u2022 VMware \u2022 Datadog\nCloud: Microsoft 365 \u2022 GSuite for Education \u2022 AWS \u2022 Jira Service Management \u2022 Confluence \u2022 SaaS\nWeb: Apache \u2022 NGINX \u2022 Slack \u2022 Zoom\nSkills: Service Delivery \u2022 Communication\u2022 Claude Code\nSummary\nApplication Support Manager with 13+ years progressing strategically from infrastructure engineering to customer-facing operations leadership. Enabling scientists to perform science, not troubleshooting. Deep full-stack expertise enables root-cause analysis that prevents issues rather than just resolving them. Proven ability to scale support operations through automation and process optimization while maintaining exceptional customer experience.\n\nWork Experience\nPerceptive, Inc (Formerly Invicro)                                 \nProvides best-in-class specialist support to global pharmaceutical, biotech, and clinical research organizations to ensure adoption and customer success.\nApplication Support Manager                       05/2022 \u2013 Present\n\u00b7\tLead global support operations for clinical research platforms serving pharmaceutical and biotech scientists, scaling from 627 to 3,339 tickets annually (417% surge capacity) while maintaining 95% customer satisfaction\n\u00b7\tHuman in the loop JIRA automation to decide the best course of action and apply labeled triggers to send answers to frequently asked questions\n\u00b7\tRolled out Jira Rovo AI agents to scale team capabilities such as pointing team members towards relevant documentation and create/update articles based on ticket findings.\n\u00b7\tOrchestrated cross-functional collaboration to accelerate issue resolution, building distributed team expertise and 42 automation rules that handled 34% of routine tasks, freeing staff to focus on complex customer needs \n\u00b7\tChampioned customer experiences and needs to development team as voice of the customer, transforming insights from 69 distinct request types into product improvements that reduced support volume 30%\n\u00b7\tAmplified team capabilities to meet demand and reduce time-to-resolution by creating 221 knowledge base articles achieving 30-50% ticket deflection and implementing 42 Jira automation rules handling 34% of routine workflows\n\u00b7\tCustomer health monitoring to understand trends and shape software bug/feature requests priorities.\n\u00b7\tLeverage MS Copilot to reduce manual operations\n\u00b7\tCultivated strategic relationships with customers including Fortune 500 pharma companies, research organizations, and academic institutions, maintaining 95% satisfaction while scaling support 200%\n\u00b7\tTracked and analyzed KPIs to identify most frequent problems through 69 request type classifications (275% improvement from 12 baseline categories), enabling data-driven bottleneck identification and proactive issue prevention\n\u00b7\tExecuted fullstack hands-on troubleshooting and mentored team members, building capacity to handle 2,500+ human tickets annually while transitioning from reactive support to intelligent service delivery and reducing toil by automatically closing messages requiring no action.\n\u00b7\tPartnered with QA to follow change control procedures and assist in RCA, CAPA, and audits both pre- and post-sales\n\u00b7\tNavigated ambiguity in customer requirements to drive strategic onboarding processes, evolving from 30% basic training requests to sophisticated technical support through systematic knowledge management\n\u00b7\tEstablished clear expectations and optimal satisfaction across C-level decision makers, achieving 95% customer satisfaction through intelligent support ecosystem combining self-service, automation, and precise issue routing\n\u00b7\tReduced support volume 30% by transforming recurring customer issues into actionable product improvements, systematically converting reports into reproducible bug tickets through 69 request type classifications and cross-team collaboration\n\u00b7\tAdvised sales team to ensure renewals are completed ahead of time via automated notifications and proactive customer engagement, supporting retention during 200% growth in support demand\n\nInvicro                                 \nGlobal research partner focused on the discovery and development of life-changing medicine\nApplication Support Technical Lead                                  05/2021 \u2013 05/2022 \n\u00b7\tResolved daily technical issues, both internally and externally, and maintained a customer satisfaction score of 95%\n\u00b7\tSupport GXP and validated/regulated environments across different customer infrastructure\n\u00b7\tTroubleshot Docker containers and escalated any issues to the web developer\n\u00b7\tTracked and monitored Service Level Agreements (SLAs) to ensure the service and scope of the agreement was meeting expectation \n\u00b7\tPartnered with sales team and acted as Application Engineer during sales calls\n\u00b7\tHands-on troubleshooting of issues on windows/macOS/linux desktops all the way up the stack to AWS or on-prem physical/VMware servers.\n\u00b7\tTroubleshoot connectivity between scanner workstations, scanning equipment such as Bruker MR and Mediso PET/SPECT/CT using DICOM peer protocol and network shared drives to access study data for analysis.\nTERC             \nNon-Profit team of math and science education & research experts, dedicated to innovation and creative problem solving \n\nSystem & Network Administrator                 01/2019 - 05/2021 \n\u00b7\tManaged Linux and Windows servers in VMware and AWS\n\u00b7\tConducted monthly maintenance cycles to ensure proper patching and upkeep of product systems\n\u00b7\tManaged migration of shared network data to Microsoft 365 Sharepoint and ensured a backup solution was in place\n\u00b7\tPartnered with internal developers to discover and implement proper tools for special project-based initiatives\n\u00b7\tExecuted new Meraki wireless network to rapidly meet the needs of a modernizing organization\n\nInvicro                                 \nGlobal research partner focused on the discovery and development of life-changing medicine\nIT Infrastructure Engineer              06/2012 - 12/2018\n\u00b7\tBuilt and fostered relationships with 3rd-party vendors to communicate expectations, and assist in meeting budgetary restrictions and deadlines\n\u00b7\tOversaw project life cycles, delegating tasks to junior staff and ensuring their success through guidance and mentorship\n\u00b7\tEvaluated offerings and managed deployments of new software and equipment\n\u00b7\tPlanned and executed technology build-out projects for new spaces, partnering with compliance and security to ensure new servers and software followed protocol\n\u00b7\tEstablished first ever IT Department budget, developing the budgetary scope and pricing to be used across the company\n\nEducation & Certifications \nBachelor of Arts \u2013 Global Studies \u2013 University of Minnesota-Twin Cities                         05/2009\nRIT MicroMasters Certificate in Cybersecurity\nHarvardX - Leading in a Remote Environment \nedX Verified Certificate for DevOps Basics for Everyone\n", "role_tags": ["application support", "customer success", "client success", "solutions engineering", "technical account management", "customer adoption", "technical enablement", "white glove support", "helpdesk manager", "service desk manager", "technical support manager", "technical support engineer", "support operations", "implementation manager", "customer experience", "professional services", "client services"], "industry_tags": ["healthcare IT", "cybersecurity", "saas", "cloud infrastructure", "devops", "life sciences"], "skills": ["jira", "git", "docker", "excel", "storage", "linux", "networking", "troubleshooting", "process improvement", "sso", "vmware", "datadog", "microsoft 365", "gsuite for education", "aws", "confluence", "apache", "nginx", "slack", "zoom", "service delivery", "communication", "code", "Claude Code"], "salary_range": {"min": 130000, "max": 0, "floor": 130000}, "priority_companies": [], "scoring": {"primary_role_tags": ["Application Support Manager", "Technical Account Manager"], "secondary_role_tags": ["Solutions Engineer", "Implementation Manager", "Enterprise Support Manager"]}, "greenhouse_boards": {"SentinelOne": "sentinellabs", "Huntress": "huntress", "Datadog": "datadog", "Pulumi": "pulumicorporation", "AssemblyAI": "assemblyai", "SpaceX": "spacex", "Anduril": "andurilindustries", "Stripe": "stripe", "Neuralink": "neuralink", "Affirm": "affirm", "Figma": "figma", "Scale AI": "scaleai", "BuildOps": "buildops", "Asana": "asana", "Flexport": "flexport", "Faire": "faire", "ZocDoc": "zocdoc", "Nubank": "nubank", "Oscar Health": "oscar", "Found": "found", "Twilio": "twilio"}, "ashby_boards": {"Help Scout": "helpscout", "Roboflow": "roboflow", "Ramp": "ramp", "Persona": "persona", "Cedar": "cedar", "Crusoe": "crusoe", "Aven": "aven", "Traba": "traba", "Paxos": "paxos", "Cognition": "cognition", "Polymarket": "polymarket"}, "ai_prompt_template": ""};
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Escaping alone does not neutralise a "javascript:" URL, so hrefs built from
+// scraped job data are scheme-checked before they reach the DOM.
+function safeUrl(raw) {
+  const candidate = String(raw || '').replace(/[\u0000-\u0020]/g, '');
+  return /^https?:\/\//i.test(candidate) ? candidate : '#';
+}
+
+// --- Profile Management ---
+function getProfile() {
+  const stored = localStorage.getItem('autojobsearch_profile');
+  if (stored) {
+    try { return JSON.parse(stored); }
+    catch(e) { console.warn('Invalid stored profile, using default'); }
+  }
+  return JSON.parse(JSON.stringify(DEFAULT_PROFILE));
+}
+
+let currentProfile = getProfile();
+
+const TAG_FIELDS = {
+  roleTags: 'role_tags',
+  industryTags: 'industry_tags',
+  skillTags: 'skills',
+  companyTags: 'priority_companies'
+};
+
+function toggleProfile() {
+  const panel = document.getElementById('profilePanel');
+  const btn = document.getElementById('profileToggle');
+  const isVisible = panel.classList.toggle('visible');
+  btn.classList.toggle('active', isVisible);
+  if (isVisible) renderProfile();
+}
+
+function renderProfile() {
+  document.getElementById('resumeSummary').value = currentProfile.resume_summary || '';
+  document.getElementById('salaryMin').value = currentProfile.salary_range?.min || '';
+  document.getElementById('salaryMax').value = currentProfile.salary_range?.max || '';
+  document.getElementById('salaryFloor').value = currentProfile.salary_range?.floor || '';
+  document.getElementById('aiPrompt').value = currentProfile.ai_prompt_template || '';
+  for (const [elemId, key] of Object.entries(TAG_FIELDS)) {
+    renderTags(elemId, currentProfile[key] || []);
+  }
+}
+
+function renderTags(containerId, tags) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  tags.forEach((tag, i) => {
+    const pill = document.createElement('span');
+    pill.className = 'tag-pill';
+    const text = document.createTextNode(tag + ' ');
+    const rm = document.createElement('span');
+    rm.className = 'remove';
+    rm.textContent = '\u00d7';
+    rm.onclick = () => removeTag(containerId, i);
+    pill.appendChild(text);
+    pill.appendChild(rm);
+    container.appendChild(pill);
+  });
+  const input = document.createElement('input');
+  input.className = 'tag-add';
+  input.placeholder = 'Add...';
+  input.onkeydown = (e) => {
+    if (e.key === 'Enter' && e.target.value.trim()) {
+      e.preventDefault();
+      addTag(containerId, e.target.value.trim());
+      e.target.value = '';
+    }
+  };
+  container.appendChild(input);
+}
+
+function autoSaveProfile() {
+  localStorage.setItem('autojobsearch_profile', JSON.stringify(currentProfile));
+  fetch('/api/profile', {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(currentProfile)
+  }).catch(() => {});
+}
+
+function addTag(containerId, value) {
+  const key = TAG_FIELDS[containerId];
+  if (!currentProfile[key]) currentProfile[key] = [];
+  if (!currentProfile[key].includes(value)) {
+    currentProfile[key].push(value);
+    renderTags(containerId, currentProfile[key]);
+    autoSaveProfile();
+  }
+  // Re-focus the input so the user can keep typing
+  const input = document.getElementById(containerId).querySelector('.tag-add');
+  if (input) input.focus();
+}
+
+function removeTag(containerId, index) {
+  const key = TAG_FIELDS[containerId];
+  if (currentProfile[key]) {
+    currentProfile[key].splice(index, 1);
+    renderTags(containerId, currentProfile[key]);
+    autoSaveProfile();
+  }
+}
+
+function clearTags(containerId) {
+  const key = TAG_FIELDS[containerId];
+  currentProfile[key] = [];
+  renderTags(containerId, []);
+  autoSaveProfile();
+}
+
+function readProfileFromUI() {
+  currentProfile.resume_summary = document.getElementById('resumeSummary').value;
+  currentProfile.ai_prompt_template = document.getElementById('aiPrompt').value;
+  currentProfile.salary_range = {
+    min: parseInt(document.getElementById('salaryMin').value) || 0,
+    max: parseInt(document.getElementById('salaryMax').value) || 0,
+    floor: parseInt(document.getElementById('salaryFloor').value) || 0,
+  };
+  // Tags are already updated live via addTag/removeTag
+}
+
+function saveProfile() {
+  readProfileFromUI();
+  localStorage.setItem('autojobsearch_profile', JSON.stringify(currentProfile));
+  showToast('Profile saved to browser');
+}
+
+function downloadProfile() {
+  readProfileFromUI();
+  const blob = new Blob([JSON.stringify(currentProfile, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'profile.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function resetProfile() {
+  localStorage.removeItem('autojobsearch_profile');
+  currentProfile = JSON.parse(JSON.stringify(DEFAULT_PROFILE));
+  renderProfile();
+  showToast('Profile reset to defaults');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// --- Resume Upload ---
+document.getElementById('resumeFileInput').addEventListener('change', handleResumeUpload);
+
+async function handleResumeUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['pdf', 'doc', 'docx'].includes(ext)) {
+    showUploadError('Unsupported file type. Upload a PDF or DOCX.');
+    return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    showUploadError('File too large (max 10 MB)');
+    return;
+  }
+
+  const btn = document.getElementById('uploadResumeBtn');
+  const status = document.getElementById('uploadStatus');
+  const progressPanel = document.getElementById('resumeProgress');
+
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+  status.textContent = '';
+  status.className = 'upload-status';
+  progressPanel.innerHTML = '';
+  progressPanel.classList.add('visible');
+
+  try {
+    addResumeProgressLine('Reading file...');
+    const base64 = await readFileAsBase64(file);
+    addResumeProgressLine('Uploading to server (' + (file.size / 1024).toFixed(0) + ' KB)...');
+
+    const resp = await fetch('/api/parse-resume', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ file: base64, filename: file.name })
+    });
+
+    if (!resp.ok && !resp.body) {
+      const err = await resp.json().catch(() => ({}));
+      showUploadError(err.error || 'Upload failed');
+      addResumeProgressLine(err.error || 'Upload failed', true);
+      btn.disabled = false;
+      btn.textContent = 'Upload Resume';
+      event.target.value = '';
+      return;
+    }
+
+    addResumeProgressLine('Processing resume (this may take a minute)...');
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let profileResult = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const msg = JSON.parse(line);
+          if (msg.type === 'progress') {
+            addResumeProgressLine(msg.message);
+          } else if (msg.type === 'result') {
+            profileResult = msg.profile;
+          } else if (msg.type === 'error') {
+            showUploadError(msg.error || 'Resume parsing failed');
+            addResumeProgressLine(msg.error || 'Failed', true);
+          }
+        } catch(e) { /* skip malformed lines */ }
+      }
+    }
+
+    if (buffer.trim()) {
+      try {
+        const msg = JSON.parse(buffer);
+        if (msg.type === 'result') profileResult = msg.profile;
+        else if (msg.type === 'error') showUploadError(msg.error || 'Failed');
+      } catch(e) {}
+    }
+
+    if (profileResult) {
+      applyResumeProfile(profileResult);
+      addResumeProgressLine('Profile populated — review and save when ready', false, true);
+      status.textContent = 'Tags extracted — review below';
+    }
+
+  } catch(e) {
+    showUploadError('Upload failed: ' + e.message);
+    addResumeProgressLine('Failed: ' + e.message, true);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Upload Resume';
+  event.target.value = '';
+}
+
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function addResumeProgressLine(msg, isError, isDone) {
+  const panel = document.getElementById('resumeProgress');
+  const line = document.createElement('div');
+  line.className = 'rp-line';
+  if (isError) line.className += ' error';
+  if (isDone) line.className += ' done';
+  line.textContent = msg;
+  panel.appendChild(line);
+  panel.scrollTop = panel.scrollHeight;
+}
+
+function showUploadError(msg) {
+  const status = document.getElementById('uploadStatus');
+  status.textContent = msg;
+  status.className = 'upload-status error';
+}
+
+function applyResumeProfile(profile) {
+  if (profile.resume_summary) {
+    currentProfile.resume_summary = profile.resume_summary;
+    document.getElementById('resumeSummary').value = profile.resume_summary;
+  }
+
+  if (profile.role_tags && profile.role_tags.length > 0) {
+    currentProfile.role_tags = profile.role_tags;
+    renderTags('roleTags', currentProfile.role_tags);
+  }
+  if (profile.industry_tags && profile.industry_tags.length > 0) {
+    currentProfile.industry_tags = profile.industry_tags;
+    renderTags('industryTags', currentProfile.industry_tags);
+  }
+  if (profile.skills && profile.skills.length > 0) {
+    currentProfile.skills = profile.skills;
+    renderTags('skillTags', currentProfile.skills);
+  }
+
+  if (!currentProfile.scoring) currentProfile.scoring = {};
+  if (profile.primary_role_tags && profile.primary_role_tags.length > 0) {
+    currentProfile.scoring.primary_role_tags = profile.primary_role_tags;
+  }
+  if (profile.secondary_role_tags && profile.secondary_role_tags.length > 0) {
+    currentProfile.scoring.secondary_role_tags = profile.secondary_role_tags;
+  }
+
+  autoSaveProfile();
+  showToast('Resume parsed — review your profile tags');
+}
+
+// --- Analyze Pasted Text ---
+async function analyzeResumeText() {
+  const text = document.getElementById('resumeSummary').value.trim();
+  if (!text) {
+    const s = document.getElementById('analyzeTextStatus');
+    s.textContent = 'Paste your resume text above first';
+    s.className = 'upload-status error';
+    return;
+  }
+
+  const btn = document.getElementById('analyzeTextBtn');
+  const status = document.getElementById('analyzeTextStatus');
+  const progressPanel = document.getElementById('analyzeTextProgress');
+
+  btn.disabled = true;
+  btn.textContent = 'Analyzing...';
+  status.textContent = '';
+  status.className = 'upload-status';
+  progressPanel.innerHTML = '';
+  progressPanel.classList.add('visible');
+
+  addTextProgressLine('Sending text to server...');
+
+  try {
+    const resp = await fetch('/api/analyze-text', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ text: text })
+    });
+
+    if (!resp.ok && !resp.body) {
+      const err = await resp.json().catch(() => ({}));
+      status.textContent = err.error || 'Analysis failed';
+      status.className = 'upload-status error';
+      addTextProgressLine(err.error || 'Failed', true);
+      btn.disabled = false;
+      btn.textContent = 'Analyze Text';
+      return;
+    }
+
+    addTextProgressLine('Processing (this may take a minute)...');
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let profileResult = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const msg = JSON.parse(line);
+          if (msg.type === 'progress') {
+            addTextProgressLine(msg.message);
+          } else if (msg.type === 'result') {
+            profileResult = msg.profile;
+          } else if (msg.type === 'error') {
+            status.textContent = msg.error || 'Analysis failed';
+            status.className = 'upload-status error';
+            addTextProgressLine(msg.error || 'Failed', true);
+          }
+        } catch(e) {}
+      }
+    }
+
+    if (buffer.trim()) {
+      try {
+        const msg = JSON.parse(buffer);
+        if (msg.type === 'result') profileResult = msg.profile;
+        else if (msg.type === 'error') {
+          status.textContent = msg.error || 'Failed';
+          status.className = 'upload-status error';
+        }
+      } catch(e) {}
+    }
+
+    if (profileResult) {
+      applyResumeProfile(profileResult);
+      addTextProgressLine('Tags populated — review and save when ready', false, true);
+      status.textContent = 'Tags extracted — review below';
+    }
+
+  } catch(e) {
+    status.textContent = 'Analysis failed: ' + e.message;
+    status.className = 'upload-status error';
+    addTextProgressLine('Failed: ' + e.message, true);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Analyze Text';
+}
+
+function addTextProgressLine(msg, isError, isDone) {
+  const panel = document.getElementById('analyzeTextProgress');
+  const line = document.createElement('div');
+  line.className = 'rp-line';
+  if (isError) line.className += ' error';
+  if (isDone) line.className += ' done';
+  line.textContent = msg;
+  panel.appendChild(line);
+  panel.scrollTop = panel.scrollHeight;
+}
+
+// --- Run Search ---
+function formatAge(isoDate) {
+  if (!isoDate) return '';
+  try {
+    const posted = new Date(isoDate);
+    const now = new Date();
+    const ms = now - posted;
+    const days = Math.floor(ms / 86400000);
+    if (days === 0) {
+      const hours = Math.floor(ms / 3600000);
+      return hours === 0 ? 'Just now' : hours + 'h ago';
+    }
+    if (days === 1) return '1 day ago';
+    if (days < 7) return days + ' days ago';
+    if (days < 14) return '1 week ago';
+    if (days < 30) return Math.floor(days / 7) + ' weeks ago';
+    if (days < 60) return '1 month ago';
+    return Math.floor(days / 30) + ' months ago';
+  } catch(e) { return ''; }
+}
+
+function formatSalary(min, max) {
+  if (min && max) return '$' + min.toLocaleString() + '\u2013$' + max.toLocaleString();
+  if (min) return '$' + min.toLocaleString() + '+';
+  return '';
+}
+
+function buildJobRow(job) {
+  const pOrder = {high: 0, medium: 1, low: 2};
+  const score = job.score || 0;
+  const priority = job.priority || 'low';
+  const salMin = job.salary_min || 0;
+  const salMax = job.salary_max || 0;
+  const posted = job.posted_date || '';
+  const tr = document.createElement('tr');
+  tr.dataset.priority = priority;
+  tr.dataset.posted = posted;
+  tr.innerHTML = `
+    <td data-sort="${score}" class="score">${Math.round(score)}</td>
+    <td data-sort="${pOrder[priority] ?? 2}" class="priority-${priority}">${escapeHtml(priority)}</td>
+    <td><a href="${escapeHtml(safeUrl(job.url))}" target="_blank" rel="noopener noreferrer" class="job-title">${escapeHtml(job.title)}</a></td>
+    <td class="company">${escapeHtml(job.company)}</td>
+    <td data-sort="${salMin}" class="salary">${formatSalary(salMin, salMax)}</td>
+    <td>${escapeHtml(job.location)}</td>
+    <td data-sort="${posted}" class="age">${formatAge(posted)}</td>
+    <td><span class="source-badge">${escapeHtml(job.source)}</span></td>
+    <td class="summary">${escapeHtml(job.summary)}</td>`;
+  return tr;
+}
+
+function loadResults(jobs) {
+  // Update jobData for re-scoring
+  jobData.length = 0;
+  jobs.forEach(j => jobData.push({
+    title: j.title || '', company: j.company || '',
+    description: (j.description || '').substring(0, 3000),
+    salary_min: j.salary_min || 0, salary_max: j.salary_max || 0,
+    location: j.location || ''
+  }));
+
+  // Rebuild table
+  const wrap = document.querySelector('.table-wrap');
+  let table = document.getElementById('jobTable');
+  if (!table && jobs.length > 0) {
+    // Remove "no results" message and create table
+    wrap.innerHTML = `<table id="jobTable">
+      <thead><tr>
+        <th onclick="sortTable(0)">Score <span class="arrow"></span></th>
+        <th onclick="sortTable(1)">Priority <span class="arrow"></span></th>
+        <th onclick="sortTable(2)">Title <span class="arrow"></span></th>
+        <th onclick="sortTable(3)">Company <span class="arrow"></span></th>
+        <th onclick="sortTable(4)">Salary <span class="arrow"></span></th>
+        <th onclick="sortTable(5)">Location <span class="arrow"></span></th>
+        <th onclick="sortTable(6)">Posted <span class="arrow"></span></th>
+        <th onclick="sortTable(7)">Source <span class="arrow"></span></th>
+        <th>Summary</th>
+      </tr></thead><tbody></tbody></table>`;
+    table = document.getElementById('jobTable');
+  }
+
+  if (jobs.length === 0) {
+    wrap.innerHTML = "<p class='empty'>No new matching jobs found.</p>";
+    document.getElementById('statTotal').textContent = 0;
+    document.getElementById('statHigh').textContent = 0;
+    document.getElementById('statMed').textContent = 0;
+    document.getElementById('statLow').textContent = 0;
+    return;
+  }
+
+  const tbody = table.querySelector('tbody');
+  tbody.innerHTML = '';
+  jobs.forEach(j => tbody.appendChild(buildJobRow(j)));
+
+  // Update stats
+  let h=0, m=0, l=0;
+  jobs.forEach(j => {
+    if (j.priority === 'high') h++;
+    else if (j.priority === 'medium') m++;
+    else l++;
+  });
+  document.getElementById('statTotal').textContent = jobs.length;
+  document.getElementById('statHigh').textContent = h;
+  document.getElementById('statMed').textContent = m;
+  document.getElementById('statLow').textContent = l;
+
+  // Reset filters
+  currentPriority = 'all';
+  currentAge = 'all';
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.filter-btn[data-priority="all"]').classList.add('active');
+  document.querySelectorAll('.age-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.age-btn[data-age="all"]').classList.add('active');
+  document.getElementById('searchBox').value = '';
+  document.getElementById('filterCount').textContent = '';
+}
+
+function addProgressLine(msg) {
+  const panel = document.getElementById('progressPanel');
+  const line = document.createElement('div');
+  line.className = 'progress-line';
+  // Highlight phases and AI scoring lines
+  if (msg.includes('Phase') || msg.includes('===')) line.className += ' phase';
+  else if (msg.includes('AI scored')) line.className += ' ai';
+  else if (msg.includes('Pipeline complete')) line.className += ' done';
+  line.textContent = msg;
+  panel.appendChild(line);
+  panel.scrollTop = panel.scrollHeight;
+}
+
+async function runSearch() {
+  const btn = document.getElementById('runSearchBtn');
+  const status = document.getElementById('searchStatus');
+  const panel = document.getElementById('progressPanel');
+  btn.disabled = true;
+  btn.textContent = 'Searching...';
+  status.textContent = '';
+  panel.innerHTML = '';
+  panel.classList.add('visible');
+
+  try {
+    readProfileFromUI();
+    localStorage.setItem('autojobsearch_profile', JSON.stringify(currentProfile));
+
+    const resp = await fetch('/api/search', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(currentProfile)
+    });
+
+    if (resp.status === 409) {
+      status.textContent = 'Search already in progress';
+      btn.disabled = false;
+      btn.textContent = 'Run Search';
+      return;
+    }
+
+    // Read streaming NDJSON response
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let resultJobs = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      // Process complete lines
+      const lines = buffer.split('\n');
+      buffer = lines.pop(); // Keep incomplete line in buffer
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const msg = JSON.parse(line);
+          if (msg.type === 'progress') {
+            addProgressLine(msg.message);
+          } else if (msg.type === 'result') {
+            resultJobs = msg.jobs || [];
+          } else if (msg.type === 'error') {
+            addProgressLine('ERROR: ' + (msg.error || 'Pipeline failed'));
+            const errLine = panel.lastChild;
+            if (errLine) errLine.className = 'progress-line error';
+          }
+        } catch(e) { /* skip malformed lines */ }
+      }
+    }
+
+    // Process any remaining buffer
+    if (buffer.trim()) {
+      try {
+        const msg = JSON.parse(buffer);
+        if (msg.type === 'result') resultJobs = msg.jobs || [];
+      } catch(e) {}
+    }
+
+    if (resultJobs !== null) {
+      loadResults(resultJobs);
+      const count = resultJobs.length;
+      addProgressLine(count > 0 ? 'Done — ' + count + ' results loaded' : 'Done — no new results');
+      if (panel.lastChild) panel.lastChild.className = 'progress-line done';
+      status.textContent = count > 0 ? count + ' results' : 'No new results';
+      // Auto-hide progress after a delay
+      setTimeout(() => { panel.classList.remove('visible'); }, 8000);
+    }
+  } catch(e) {
+    addProgressLine('Failed: ' + e.message);
+    if (panel.lastChild) panel.lastChild.className = 'progress-line error';
+    status.textContent = 'Failed';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Run Search';
+}
+
+let currentPriority = 'all';
+let currentAge = 'all';
+let sortCol = 0, sortAsc = false;
+
+// --- Ollama model loading ---
+async function loadModels() {
+  const sel = document.getElementById('modelSelect');
+  const status = document.getElementById('ollamaStatus');
+  const btn = document.getElementById('rescoreBtn');
+  try {
+    const resp = await fetch(OLLAMA_URL + '/api/tags');
+    const data = await resp.json();
+    const models = data.models || [];
+    sel.innerHTML = models.map(m => {
+      const isDefault = m.name === DEFAULT_MODEL;
+      const label = isDefault ? '✓ ' + escapeHtml(m.name) : '  ' + escapeHtml(m.name);
+      return `<option value="${escapeHtml(m.name)}"${isDefault ? ' selected' : ''}>${label}</option>`;
+    }).join('');
+    if (models.length > 0) {
+      btn.disabled = false;
+      const defaultFound = models.some(m => m.name === DEFAULT_MODEL);
+      status.textContent = defaultFound
+        ? DEFAULT_MODEL + ' (default)'
+        : models.length + ' models available';
+    } else {
+      sel.innerHTML = '<option value="">No models found</option>';
+      status.textContent = 'No models';
+    }
+  } catch(e) {
+    sel.innerHTML = '<option value="">Ollama not running</option>';
+    status.textContent = 'Ollama offline';
+    btn.disabled = true;
+  }
+}
+loadModels();
+renderProfile();
+
+// --- AI re-scoring ---
+function buildPrompt(job) {
+  readProfileFromUI();
+  const template = currentProfile.ai_prompt_template || '';
+  return template
+    .replaceAll('$resume_summary', currentProfile.resume_summary || '')
+    .replaceAll('$title', job.title || '')
+    .replaceAll('$company', job.company || '')
+    .replaceAll('$description', (job.description || '').substring(0, 2000))
+    .replaceAll('$salary_min', String(job.salary_min || 0))
+    .replaceAll('$salary_max', String(job.salary_max || 0))
+    .replaceAll('$location', job.location || '');
+}
+
+async function rescoreAll() {
+  const model = document.getElementById('modelSelect').value;
+  if (!model) return;
+  const btn = document.getElementById('rescoreBtn');
+  const progress = document.getElementById('ollamaProgress');
+  btn.disabled = true;
+  btn.textContent = 'Scoring...';
+
+  const rows = document.querySelectorAll('#jobTable tbody tr');
+  const rowArr = Array.from(rows);
+  rowArr.sort((a,b) => parseFloat(b.children[0].dataset.sort) - parseFloat(a.children[0].dataset.sort));
+  const toScore = rowArr.slice(0, 15);
+
+  for (let i = 0; i < toScore.length; i++) {
+    const row = toScore[i];
+    const idx = Array.from(rows).indexOf(row);
+    progress.textContent = `${i+1}/15`;
+    try {
+      const job = jobData[idx];
+      if (!job) continue;
+      const prompt = buildPrompt(job);
+
+      const resp = await fetch(OLLAMA_URL + '/api/chat', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          model: model,
+          messages: [{role: 'user', content: prompt}],
+          stream: false,
+          format: 'json'
+        })
+      });
+      const data = await resp.json();
+      let text = data.message.content.trim();
+      if (text.startsWith('```')) text = text.split('\n').slice(1).join('\n').replace(/```$/,'').trim();
+      const result = JSON.parse(text);
+
+      const ruleScore = parseFloat(row.children[0].dataset.sort) || 0;
+      const baseScore = Math.min(ruleScore, 50);
+      const aiScore = Math.max(0, Math.min(50, parseInt(result.fit_score) || 0));
+      const newTotal = baseScore + aiScore;
+      const newPriority = result.priority || 'low';
+
+      row.children[0].dataset.sort = newTotal;
+      row.children[0].textContent = newTotal;
+      row.children[0].classList.add('rescored');
+      row.dataset.priority = newPriority;
+      row.children[1].dataset.sort = {'high':0,'medium':1,'low':2}[newPriority] ?? 2;
+      row.children[1].className = 'priority-' + newPriority;
+      row.children[1].textContent = newPriority;
+      if (result.summary) row.children[row.children.length - 1].textContent = result.summary;
+    } catch(e) {
+      console.warn('Score failed for row', idx, e);
+    }
+  }
+
+  sortCol = 0; sortAsc = false;
+  const tbody = document.querySelector('#jobTable tbody');
+  const sorted = Array.from(tbody.querySelectorAll('tr'));
+  sorted.sort((a,b) => parseFloat(b.children[0].dataset.sort) - parseFloat(a.children[0].dataset.sort));
+  sorted.forEach(r => tbody.appendChild(r));
+
+  updateStatCounts();
+  btn.disabled = false;
+  btn.textContent = 'Re-score with AI';
+  progress.textContent = 'Done';
+  setTimeout(() => { progress.textContent = ''; }, 3000);
+}
+
+function updateStatCounts() {
+  const rows = document.querySelectorAll('#jobTable tbody tr');
+  let h=0, m=0, l=0;
+  rows.forEach(r => {
+    const p = r.dataset.priority;
+    if (p === 'high') h++;
+    else if (p === 'medium') m++;
+    else l++;
+  });
+  document.getElementById('statHigh').textContent = h;
+  document.getElementById('statMed').textContent = m;
+  document.getElementById('statLow').textContent = l;
+  document.getElementById('statTotal').textContent = rows.length;
+}
+
+// --- Filtering ---
+function filterTable() {
+  const q = document.getElementById('searchBox').value.toLowerCase();
+  const now = new Date();
+  const maxAgeDays = currentAge === 'all' ? Infinity : parseInt(currentAge);
+  let visible = 0;
+
+  document.querySelectorAll('#jobTable tbody tr').forEach(row => {
+    const text = row.textContent.toLowerCase();
+    const priority = row.dataset.priority;
+    const posted = row.dataset.posted;
+
+    const matchesSearch = !q || text.includes(q);
+    const matchesPriority = currentPriority === 'all' || priority === currentPriority;
+
+    let matchesAge = true;
+    if (maxAgeDays !== Infinity && posted) {
+      const postedDate = new Date(posted);
+      const ageDays = (now - postedDate) / (1000 * 60 * 60 * 24);
+      matchesAge = ageDays <= maxAgeDays;
+    }
+
+    const show = matchesSearch && matchesPriority && matchesAge;
+    row.classList.toggle('hidden', !show);
+    if (show) visible++;
+  });
+
+  const total = document.querySelectorAll('#jobTable tbody tr').length;
+  const countEl = document.getElementById('filterCount');
+  if (q || currentPriority !== 'all' || currentAge !== 'all') {
+    countEl.textContent = `Showing ${visible} of ${total}`;
+  } else {
+    countEl.textContent = '';
+  }
+}
+
+function setPriority(p, btn) {
+  currentPriority = p;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active'));
+  const cardMap = {'all': '.stat-total', 'high': '.stat-high', 'medium': '.stat-med', 'low': '.stat-low'};
+  const card = document.querySelector(cardMap[p]);
+  if (card) card.classList.add('active');
+  filterTable();
+}
+
+function cardFilter(p) {
+  const btn = document.querySelector(`.filter-btn[data-priority="${p}"]`);
+  if (btn) setPriority(p, btn);
+}
+
+function setAge(age, btn) {
+  currentAge = age;
+  document.querySelectorAll('.age-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filterTable();
+}
+
+// --- Sorting ---
+function sortTable(col) {
+  if (sortCol === col) sortAsc = !sortAsc;
+  else { sortCol = col; sortAsc = true; }
+
+  const tbody = document.querySelector('#jobTable tbody');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+
+  rows.sort((a, b) => {
+    let av = a.children[col].dataset.sort || a.children[col].textContent.trim();
+    let bv = b.children[col].dataset.sort || b.children[col].textContent.trim();
+    const an = parseFloat(av), bn = parseFloat(bv);
+    if (!isNaN(an) && !isNaN(bn)) return sortAsc ? an - bn : bn - an;
+    return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+  });
+
+  rows.forEach(r => tbody.appendChild(r));
+
+  document.querySelectorAll('#jobTable th .arrow').forEach((a, i) => {
+    a.textContent = i === col ? (sortAsc ? '\u25B2' : '\u25BC') : '';
+  });
+}
+
+// --- Past Results ---
+let historyLoaded = false;
+function toggleHistory() {
+  const dd = document.getElementById('historyDropdown');
+  const isOpen = dd.classList.contains('visible');
+  if (isOpen) {
+    dd.classList.remove('visible');
+    return;
+  }
+  if (!historyLoaded) {
+    loadHistory();
+  }
+  dd.classList.add('visible');
+}
+
+async function loadHistory() {
+  const dd = document.getElementById('historyDropdown');
+  dd.innerHTML = '<div class="history-empty">Loading...</div>';
+  try {
+    const resp = await fetch('/api/reports');
+    const reports = await resp.json();
+    if (!reports.length) {
+      dd.innerHTML = '<div class="history-empty">No past results yet</div>';
+      return;
+    }
+    dd.innerHTML = '';
+    reports.forEach(r => {
+      const a = document.createElement('a');
+      a.href = '/' + r.filename;
+      a.textContent = r.label;
+      dd.appendChild(a);
+    });
+    historyLoaded = true;
+  } catch (e) {
+    dd.innerHTML = '<div class="history-empty">Failed to load reports</div>';
+  }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+  const wrapper = document.querySelector('.history-wrapper');
+  if (wrapper && !wrapper.contains(e.target)) {
+    document.getElementById('historyDropdown').classList.remove('visible');
+  }
+});
+</script>
+
+</body>
+</html>
