@@ -1,7 +1,7 @@
 """Integration tests — end-to-end pipeline flows without network calls."""
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -27,7 +27,8 @@ def make_job():
             "salary_max": 150000,
             "location": "Remote",
             "is_remote": True,
-            "posted_date": datetime(2026, 2, 18, 10, 0, 0, tzinfo=timezone.utc),
+            # Relative, not a fixed date — see the note in conftest.make_job.
+            "posted_date": datetime.now(timezone.utc) - timedelta(days=1),
         }
         defaults.update(overrides)
         return JobListing(**defaults)
