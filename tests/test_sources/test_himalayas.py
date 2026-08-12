@@ -2,6 +2,7 @@
 
 from unittest.mock import patch
 
+import pytest
 import responses
 
 from sources.himalayas import HimalayasSource, API_URL, PAGE_SIZE
@@ -272,3 +273,31 @@ def test_url_used_when_present():
 
     csm = next(j for j in jobs if j.title == "Customer Success Manager")
     assert csm.url == "https://himalayas.app/companies/remotefirst/jobs/customer-success-manager"
+
+
+# --- location rendering ---
+#
+# The API returns locationRestrictions as a list, so str() on it leaked a Python
+# repr into reports: "['United States']" instead of "United States".
+
+
+@pytest.mark.parametrize("raw,expected", [
+    (["United States"], "United States"),
+    (["United States", "Canada"], "United States, Canada"),
+    ([], "Worldwide"),
+    (None, "Worldwide"),
+    ("United States", "United States"),      # tolerate a bare string
+    (["  Spain  "], "Spain"),                 # entries are trimmed
+    (["United States", "", None], "United States"),  # blanks dropped
+])
+def test_extract_location_renders_readable_text(raw, expected):
+    from sources.himalayas import HimalayasSource
+
+    assert HimalayasSource()._extract_location({"locationRestrictions": raw}) == expected
+
+
+def test_extract_location_never_returns_a_repr():
+    from sources.himalayas import HimalayasSource
+
+    out = HimalayasSource()._extract_location({"locationRestrictions": ["United States"]})
+    assert "[" not in out and "'" not in out
