@@ -119,3 +119,49 @@ def test_empty_response():
     source = GreenhouseSource()
     jobs = source.collect()
     assert jobs == []
+
+
+@responses.activate
+def test_one_dead_board_does_not_discard_the_others():
+    """A 404 on a single board must not take the whole source down.
+
+    Reproduces a real failure: board 22 of 22 (creditkarma) returned 404, the
+    exception escaped collect() into safe_collect(), and all 103 roles already
+    gathered from the previous 21 boards were discarded — so Greenhouse, the
+    primary source, silently contributed zero jobs to every run.
+    """
+    import config
+
+    fixture = load_fixture("greenhouse_response.json")
+    tokens = list(config.GREENHOUSE_BOARDS.values())
+    assert len(tokens) >= 2, "test needs at least two boards configured"
+
+    # Fail the first board so the assertion also proves the loop continued
+    # rather than merely that earlier results were retained.
+    for i, token in enumerate(tokens):
+        if i == 0:
+            responses.add(responses.GET, f"{API_BASE}/{token}/jobs", status=404)
+        else:
+            responses.add(responses.GET, f"{API_BASE}/{token}/jobs", json=fixture, status=200)
+
+    jobs = GreenhouseSource().collect()
+
+    # Every board was still attempted, and the healthy ones still returned jobs.
+    assert len(responses.calls) == len(tokens), "a dead board stopped later boards being fetched"
+    assert jobs, "a single dead board discarded every other board's results"
+
+
+@responses.activate
+def test_dead_board_survives_safe_collect():
+    """The same failure through the wrapper the pipeline actually calls."""
+    import config
+
+    fixture = load_fixture("greenhouse_response.json")
+    tokens = list(config.GREENHOUSE_BOARDS.values())
+    for i, token in enumerate(tokens):
+        if i == 0:
+            responses.add(responses.GET, f"{API_BASE}/{token}/jobs", status=404)
+        else:
+            responses.add(responses.GET, f"{API_BASE}/{token}/jobs", json=fixture, status=200)
+
+    assert GreenhouseSource().safe_collect(), "safe_collect returned nothing"
