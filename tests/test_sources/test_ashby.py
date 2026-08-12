@@ -221,3 +221,21 @@ def test_date_parsing_empty():
     source = AshbySource()
     result = source._parse_date("")
     assert result.year >= 2026
+
+
+@responses.activate
+def test_one_dead_board_does_not_discard_the_others(monkeypatch):
+    """Same isolation guarantee as Greenhouse — boards are independent."""
+    import config
+    monkeypatch.setattr(config, "ASHBY_BOARDS", {"Ramp": "ramp", "Linear": "linear"})
+
+    fixture = load_fixture("ashby_response.json")
+    # Fail the first board so this also proves the loop continued, not merely
+    # that earlier results were retained.
+    responses.add(responses.GET, RAMP_URL, status=404)
+    responses.add(responses.GET, API_BASE.format(slug="linear"), json=fixture, status=200)
+
+    jobs = AshbySource().collect()
+
+    assert len(responses.calls) == 2, "a dead board stopped later boards being fetched"
+    assert jobs, "a single dead board discarded every other board's results"
