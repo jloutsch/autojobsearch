@@ -375,3 +375,35 @@ def test_pipeline_high_priority_rule_only(
     assert result[0]["scored_by"] == "rules"
     assert result[0]["priority"] == "high"
     assert result[0]["score"] >= 70
+
+
+@patch("main.generate_dashboard")
+@patch("main.save_daily_report")
+@patch("main.score_top_jobs")
+@patch("main.mark_as_sent")
+@patch("main.was_previously_sent", return_value=False)
+@patch("main.is_duplicate", return_value=False)
+@patch("main.passes_hard_filters", return_value=True)
+@patch("main.init_db")
+def test_priority_band_matches_displayed_score(
+    mock_init_db, mock_filters, mock_dedup, mock_sent, mock_mark,
+    mock_ai, mock_report, mock_dash
+):
+    """A job's band must agree with the whole number every renderer shows.
+
+    Banding a fractional score puts two jobs both displaying "50/100" into
+    different sections, which reads as a bug in the report.
+    """
+    job = _make_job()
+    mock_ai.return_value = [None]
+    mock_report.return_value = "reports/2026-02-19.md"
+    mock_dash.return_value = "reports/2026-02-19.html"
+
+    with stub_sources([job], []):
+        from main import run_pipeline
+        result = run_pipeline()
+
+    score = result[0]["score"]
+    assert score == round(score), "score must already be whole when it reaches the renderers"
+    expected = "high" if score >= 70 else ("medium" if score >= 50 else "low")
+    assert result[0]["priority"] == expected

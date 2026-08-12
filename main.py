@@ -150,6 +150,12 @@ def run_pipeline():
             components = {}
             scored_by = "rules"
 
+        # Band the score the reader actually sees. Every renderer displays this
+        # as a whole number, so thresholding a fractional value puts two jobs
+        # both showing "50/100" in different priority bands — which reads as a
+        # mistake in the report rather than a rounding artefact.
+        total_score = round(total_score)
+
         if total_score >= 70:
             priority = "high"
         elif total_score >= 50:
@@ -165,7 +171,7 @@ def run_pipeline():
             "company": job.company,
             "url": job.url,
             "source": job.source,
-            "score": round(total_score, 1),
+            "score": total_score,
             "priority": priority,
             "salary_min": job.salary_min,
             "salary_max": job.salary_max,
