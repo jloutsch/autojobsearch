@@ -87,3 +87,62 @@ def test_report_includes_job_details(tmp_path):
     assert "TestCorp" in content
     assert "greenhouse" in content
     assert "$130,000" in content
+
+
+# --- untrusted text in markdown ---
+#
+# Job titles, companies and URLs are scraped. In a markdown link they can both
+# break out of the link label and supply a script URL as the destination, so the
+# scheme check alone is not sufficient — the link structure has to hold too.
+
+
+def _hostile_job(**overrides):
+    job = {
+        "title": "Nice Job](javascript:alert(1)) and [more",
+        "company": "Evil\nCo",
+        "url": "javascript:alert(1)",
+        "score": 90,
+        "priority": "high",
+        "source": "x",
+        "location": "Remote\n### Forged Heading",
+        "summary": "Line1\n## Forged\n\n[click](javascript:x)",
+        "salary_min": 0,
+        "salary_max": 0,
+        "posted_date": "2026-02-18T10:00:00+00:00",
+    }
+    job.update(overrides)
+    return job
+
+
+@freeze_time("2026-02-19 12:00:00", tz_offset=0)
+def test_no_script_url_reaches_a_link_destination(tmp_path):
+    import re
+
+    path = save_daily_report([_hostile_job()], output_dir=str(tmp_path))
+    md = open(path).read()
+
+    destinations = re.findall(r"\[(?:[^\]\\]|\\.)*\]\(([^)]*)\)", md)
+    assert destinations, "expected at least one markdown link"
+    for dest in destinations:
+        assert not dest.lower().startswith(("javascript:", "data:", "vbscript:"))
+
+
+@freeze_time("2026-02-19 12:00:00", tz_offset=0)
+def test_scraped_text_cannot_forge_headings(tmp_path):
+    """Newlines are collapsed, so '###' can never begin a line."""
+    import re
+
+    path = save_daily_report([_hostile_job()], output_dir=str(tmp_path))
+    md = open(path).read()
+
+    headings = [ln for ln in md.splitlines() if re.match(r"^#{1,6}\s", ln)]
+    assert not [h for h in headings if "Forged" in h]
+
+
+@freeze_time("2026-02-19 12:00:00", tz_offset=0)
+def test_legitimate_url_is_preserved(tmp_path):
+    path = save_daily_report(
+        [_hostile_job(title="Real Job", url="https://boards.greenhouse.io/x/jobs/1")],
+        output_dir=str(tmp_path),
+    )
+    assert "https://boards.greenhouse.io/x/jobs/1" in open(path).read()

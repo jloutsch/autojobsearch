@@ -5,7 +5,7 @@ import logging
 import os
 import sys
 
-from ai_scorer import score_top_jobs
+from ai_scorer import MAX_FIT, score_top_jobs
 from archive import save_daily_report
 from dashboard import generate_dashboard
 from dedup import init_db, is_duplicate, mark_as_sent, was_previously_sent
@@ -35,16 +35,23 @@ logger = logging.getLogger(__name__)
 
 DB_PATH = os.path.join("data", "seen_jobs.db") if os.path.isdir("data") else "seen_jobs.db"
 
+# Composite scoring. Rule scoring encodes the profile's explicit criteria
+# (salary floor, priority companies, role keywords) so it stays the backbone;
+# AI scoring carries the nuance the keyword rules can't see.
+MAX_RULE_SCORE = 50.0
+RULE_WEIGHT = 0.4
+AI_WEIGHT = 0.6
+COMPARATIVE_BONUS = 6.0
 
-def run_pipeline():
-    """Execute the full job search pipeline."""
 
-    # --- Phase 0: Initialize ---
-    init_db(DB_PATH)
+def build_sources():
+    """Instantiate every collection source.
 
-    # --- Phase 1: Collect ---
-    logger.info("=== Phase 1: COLLECT ===")
-    sources = [
+    Kept as a single seam so tests can stub collection with one patch. Patching
+    the source classes individually is silently incomplete — any source added
+    later goes unpatched and makes real network calls during the test run.
+    """
+    return [
         GreenhouseSource(),
         CrowdStrikeSource(),
         RemoteOKSource(),
@@ -59,6 +66,17 @@ def run_pipeline():
         TheMuseSource(),
         AshbySource(),
     ]
+
+
+def run_pipeline():
+    """Execute the full job search pipeline."""
+
+    # --- Phase 0: Initialize ---
+    init_db(DB_PATH)
+
+    # --- Phase 1: Collect ---
+    logger.info("=== Phase 1: COLLECT ===")
+    sources = build_sources()
 
     raw_jobs = []
     for source in sources:
@@ -102,31 +120,53 @@ def run_pipeline():
     rule_scores = [rule_based_score(job) for job in new_jobs]
 
     logger.info("=== Phase 3b: SCORE (AI) ===")
-    ai_results = score_top_jobs(new_jobs, rule_scores, top_n=15)
+    ai_results = score_top_jobs(new_jobs, rule_scores, top_n=25)
 
-    # Combine into final scored list
+    # Combine into final scored list. Both halves are normalised to 0-100 so a
+    # job that skipped AI scoring competes on the same scale instead of being
+    # capped at half the range.
     scored_jobs = []
     for job, r_score, ai_result in zip(new_jobs, rule_scores, ai_results):
-        if ai_result and ai_result.get("fit_score"):
-            total_score = r_score + ai_result["fit_score"]
-            priority = ai_result.get("priority", "low")
+        rule_pct = r_score / MAX_RULE_SCORE
+
+        if ai_result and ai_result.get("status") == "ok":
+            ai_pct = ai_result["fit_score"] / MAX_FIT
+            total_score = 100 * (RULE_WEIGHT * rule_pct + AI_WEIGHT * ai_pct)
+            # Small bounded nudge from the head-to-head pass.
+            rank = ai_result.get("comparative_rank")
+            if rank is not None:
+                total_score += max(0.0, COMPARATIVE_BONUS - rank * 0.6)
+            total_score = max(0.0, min(100.0, total_score))
             summary = ai_result.get("summary", "")
             key_matches = ai_result.get("key_matches", [])
             gaps = ai_result.get("gaps", [])
+            components = ai_result.get("components", {})
+            scored_by = "ai"
         else:
-            total_score = r_score
-            # Priority from rule-based score alone
-            if r_score >= 30:
-                priority = "high"
-            elif r_score >= 20:
-                priority = "medium"
-            else:
-                priority = "low"
+            total_score = 100 * rule_pct
             summary = ""
             key_matches = []
             gaps = []
+            components = {}
+            scored_by = "rules"
+
+        # Band the score the reader actually sees. Every renderer displays this
+        # as a whole number, so thresholding a fractional value puts two jobs
+        # both showing "50/100" in different priority bands — which reads as a
+        # mistake in the report rather than a rounding artefact.
+        total_score = round(total_score)
+
+        if total_score >= 70:
+            priority = "high"
+        elif total_score >= 50:
+            priority = "medium"
+        else:
+            priority = "low"
 
         scored_jobs.append({
+            "scored_by": scored_by,
+            "rule_score": round(r_score, 1),
+            "components": components,
             "title": job.title,
             "company": job.company,
             "url": job.url,
