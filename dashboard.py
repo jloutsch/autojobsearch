@@ -423,6 +423,13 @@ function safeUrl(raw) {{
   return /^https?:\\/\\//i.test(candidate) ? candidate : '#';
 }}
 
+// Mirrors sanitize.company_search_url. No source supplies an employer website,
+// so the name is encoded into a fixed origin; '' means render plain text.
+function companySearchUrl(name) {{
+  const trimmed = String(name || '').trim();
+  return trimmed ? 'https://www.google.com/search?q=' + encodeURIComponent(trimmed) : '';
+}}
+
 // --- Profile Management ---
 function getProfile() {{
   const stored = localStorage.getItem('autojobsearch_profile');
@@ -875,11 +882,15 @@ function buildJobRow(job) {{
   const tr = document.createElement('tr');
   tr.dataset.priority = priority;
   tr.dataset.posted = posted;
+  const companyUrl = companySearchUrl(job.company);
+  const companyCell = companyUrl
+    ? `<a href="${{escapeHtml(safeUrl(companyUrl))}}" target="_blank" rel="noopener noreferrer" class="company-link">${{escapeHtml(job.company)}}</a>`
+    : escapeHtml(job.company);
   tr.innerHTML = `
     <td data-sort="${{score}}" class="score">${{Math.round(score)}}</td>
     <td data-sort="${{pOrder[priority] ?? 2}}" class="priority-${{priority}}">${{escapeHtml(priority)}}</td>
     <td><a href="${{escapeHtml(safeUrl(job.url))}}" target="_blank" rel="noopener noreferrer" class="job-title">${{escapeHtml(job.title)}}</a></td>
-    <td class="company">${{escapeHtml(job.company)}}</td>
+    <td class="company">${{companyCell}}</td>
     <td data-sort="${{salMin}}" class="salary">${{formatSalary(salMin, salMax)}}</td>
     <td>${{escapeHtml(job.location)}}</td>
     <td data-sort="${{posted}}" class="age">${{formatAge(posted)}}</td>
