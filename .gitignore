@@ -11,3 +11,6 @@ profile.json
 .github/workflows/CLAUDE.md
 sources/CLAUDE.md
 CLAUDE.md
+
+# Subagent-driven-development scratch (ledger, briefs, review packages)
+.superpowers/

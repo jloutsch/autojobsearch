@@ -6,7 +6,7 @@ import os
 from datetime import date
 
 from ai_scorer import OLLAMA_MODEL
-from sanitize import safe_url
+from sanitize import company_search_url, safe_url
 from user_profile import get_profile
 
 
@@ -222,6 +222,8 @@ def generate_dashboard(ranked_jobs: list[dict], output_dir: str = "reports/", fi
   .job-title {{ color: #60a5fa; text-decoration: none; font-weight: 500; }}
   .job-title:hover {{ text-decoration: underline; }}
   .company {{ color: #e2e8f0; font-weight: 500; }}
+  .company-link {{ color: inherit; text-decoration: none; }}
+  .company-link:hover {{ text-decoration: underline; }}
   .source-badge {{ background: #334155; padding: 2px 8px; border-radius: 4px;
                   font-size: 12px; color: #94a3b8; }}
   .salary {{ color: #4ade80; white-space: nowrap; }}
@@ -419,6 +421,13 @@ function escapeHtml(str) {{
 function safeUrl(raw) {{
   const candidate = String(raw || '').replace(/[\\u0000-\\u0020]/g, '');
   return /^https?:\\/\\//i.test(candidate) ? candidate : '#';
+}}
+
+// Mirrors sanitize.company_search_url. No source supplies an employer website,
+// so the name is encoded into a fixed origin; '' means render plain text.
+function companySearchUrl(name) {{
+  const trimmed = String(name || '').trim();
+  return trimmed ? 'https://www.google.com/search?q=' + encodeURIComponent(trimmed) : '';
 }}
 
 // --- Profile Management ---
@@ -873,11 +882,15 @@ function buildJobRow(job) {{
   const tr = document.createElement('tr');
   tr.dataset.priority = priority;
   tr.dataset.posted = posted;
+  const companyUrl = companySearchUrl(job.company);
+  const companyCell = companyUrl
+    ? `<a href="${{escapeHtml(safeUrl(companyUrl))}}" target="_blank" rel="noopener noreferrer" class="company-link">${{escapeHtml(job.company)}}</a>`
+    : escapeHtml(job.company);
   tr.innerHTML = `
     <td data-sort="${{score}}" class="score">${{Math.round(score)}}</td>
     <td data-sort="${{pOrder[priority] ?? 2}}" class="priority-${{priority}}">${{escapeHtml(priority)}}</td>
     <td><a href="${{escapeHtml(safeUrl(job.url))}}" target="_blank" rel="noopener noreferrer" class="job-title">${{escapeHtml(job.title)}}</a></td>
-    <td class="company">${{escapeHtml(job.company)}}</td>
+    <td class="company">${{companyCell}}</td>
     <td data-sort="${{salMin}}" class="salary">${{formatSalary(salMin, salMax)}}</td>
     <td>${{escapeHtml(job.location)}}</td>
     <td data-sort="${{posted}}" class="age">${{formatAge(posted)}}</td>
@@ -1368,6 +1381,14 @@ def _render_row(job: dict) -> str:
     """Render a single table row."""
     title = html.escape(job.get("title", ""))
     company = html.escape(job.get("company", ""))
+    company_url = company_search_url(job.get("company", ""))
+    if company_url:
+        company_cell = (
+            f'<a href="{html.escape(safe_url(company_url))}" target="_blank" '
+            f'rel="noopener noreferrer" class="company-link">{company}</a>'
+        )
+    else:
+        company_cell = company
     url = html.escape(safe_url(job.get("url", "")))
     score = job.get("score", 0)
     priority_raw = job.get("priority", "low")
@@ -1397,7 +1418,7 @@ def _render_row(job: dict) -> str:
     <td data-sort="{score}" class="score">{score:.0f}</td>
     <td data-sort="{priority_order.get(priority, 2)}" class="priority-{priority}">{priority}</td>
     <td><a href="{url}" target="_blank" class="job-title">{title}</a></td>
-    <td class="company">{company}</td>
+    <td class="company">{company_cell}</td>
     <td data-sort="{salary_sort}" class="salary">{salary}</td>
     <td>{location}</td>
     <td data-sort="{posted_iso}" class="age">{age_display}</td>
