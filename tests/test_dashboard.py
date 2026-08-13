@@ -397,8 +397,19 @@ def test_empty_company_renders_plain_text_not_an_empty_link():
 
 
 def test_hostile_company_name_cannot_escape_the_href():
+    """The name must not be able to terminate the href attribute.
+
+    The bare substring "onmouseover=" legitimately survives in the visible link
+    text: html.escape() neutralises the quotes around it but has no reason to
+    escape "=". What matters is that no attribute-breaking form reaches the
+    markup and that the href itself is fully percent-encoded.
+    """
     row = _row(company='Evil" onmouseover="alert(1)')
-    assert "onmouseover=" not in row
+
+    # No attribute-breaking form: the quote that would close href is escaped.
+    assert 'onmouseover="' not in row
+    # The hostile characters are percent-encoded inside the href.
+    assert "onmouseover%3D" in row
     assert 'class="company-link"' in row
 
 
