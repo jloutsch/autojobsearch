@@ -361,3 +361,64 @@ def test_render_row_strips_script_url():
     })
     assert "javascript:" not in row
     assert 'href="#"' in row
+
+
+# --- company links ---
+
+
+def _row(**overrides):
+    job = {
+        "title": "CSM", "company": "Datadog", "url": "https://example.com/1",
+        "score": 80, "priority": "high", "source": "greenhouse",
+        "location": "Remote", "summary": "", "posted_date": "2026-02-18T00:00:00+00:00",
+        "salary_min": 0, "salary_max": 0,
+    }
+    job.update(overrides)
+    return _render_row(job)
+
+
+def test_company_renders_as_a_search_link():
+    row = _row(company="Datadog")
+    assert 'class="company-link"' in row
+    assert "https://www.google.com/search?q=Datadog" in row
+    assert ">Datadog</a>" in row
+
+
+def test_company_link_opens_in_a_new_tab_safely():
+    row = _row(company="Datadog")
+    assert 'target="_blank"' in row
+    assert 'rel="noopener noreferrer"' in row
+
+
+def test_empty_company_renders_plain_text_not_an_empty_link():
+    row = _row(company="")
+    assert "company-link" not in row
+    assert 'href="#"' not in row
+
+
+def test_hostile_company_name_cannot_escape_the_href():
+    """The name must not be able to terminate the href attribute.
+
+    The bare substring "onmouseover=" legitimately survives in the visible link
+    text: html.escape() neutralises the quotes around it but has no reason to
+    escape "=". What matters is that no attribute-breaking form reaches the
+    markup and that the href itself is fully percent-encoded.
+    """
+    row = _row(company='Evil" onmouseover="alert(1)')
+
+    # No attribute-breaking form: the quote that would close href is escaped.
+    assert 'onmouseover="' not in row
+    # The hostile characters are percent-encoded inside the href.
+    assert "onmouseover%3D" in row
+    assert 'class="company-link"' in row
+
+
+def test_job_title_link_is_unaffected():
+    """Regression: the title anchor keeps its own safe_url treatment."""
+    row = _row(url="https://example.com/1")
+    assert '<a href="https://example.com/1"' in row
+    assert 'class="job-title"' in row
+
+    blocked = _row(url="javascript:alert(1)")
+    assert "javascript:" not in blocked
+    assert 'href="#"' in blocked

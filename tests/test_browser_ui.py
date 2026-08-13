@@ -614,3 +614,59 @@ def test_profile_persists_across_reload(page, server_url):
 
     # Cleanup
     page.evaluate("localStorage.clear()")
+
+
+def test_rendered_page_has_company_links(page, server_url):
+    """Confirms a real browser renders the server-generated company links with
+    the expected href shape, and that sorting does not disturb them.
+
+    This is NOT the regression guard for the client-side buildJobRow path --
+    test_build_job_row_renders_company_link is, because sortTable() only
+    reorders existing DOM nodes via appendChild and never rebuilds a cell, so
+    the before/after count here can't actually detect a broken row builder.
+    """
+    page.goto(f"{server_url}/2026-02-19.html")
+    page.wait_for_selector("table tbody tr")
+
+    before = page.locator("td.company a.company-link").count()
+    assert before > 0, "no company links on initial load"
+
+    page.click("th:has-text('Company')")
+    page.wait_for_timeout(300)
+
+    after = page.locator("td.company a.company-link").count()
+    assert after == before, "company links disappeared after sorting"
+
+    href = page.locator("td.company a.company-link").first.get_attribute("href")
+    assert href.startswith("https://www.google.com/search?q=")
+
+
+def test_build_job_row_renders_company_link(page, server_url):
+    """buildJobRow() is the client-side row builder used after a Run Search
+    (loadResults() rebuilds every row via buildJobRow, unlike sortTable()/
+    filterTable() which only reorder or hide existing rows). This calls it
+    directly to confirm the company cell it produces still links out.
+    """
+    page.goto(f"{server_url}/2026-02-19.html")
+    page.wait_for_selector("table tbody tr")
+
+    cell_html = page.evaluate(
+        """() => buildJobRow({
+            company: 'Acme Corp', title: 'Role', url: 'https://example.com/x',
+            source: 'greenhouse', score: 50, priority: 'medium',
+            salary_min: 0, salary_max: 0, location: 'Remote',
+            posted_date: '', summary: ''
+        }).querySelector('td.company').innerHTML"""
+    )
+    assert 'class="company-link"' in cell_html
+    assert "https://www.google.com/search?q=Acme" in cell_html
+
+    empty_html = page.evaluate(
+        """() => buildJobRow({
+            company: '  ', title: 'Role', url: 'https://example.com/x',
+            source: 'greenhouse', score: 50, priority: 'medium',
+            salary_min: 0, salary_max: 0, location: 'Remote',
+            posted_date: '', summary: ''
+        }).querySelector('td.company').innerHTML"""
+    )
+    assert "<a" not in empty_html
