@@ -1,0 +1,57 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer push to the same PR makes the in-flight run obsolete.
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          # Matches daily-job-search.yml, so tests run on the same interpreter
+          # the scheduled pipeline actually uses.
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # 35 of the tests drive a real browser through pytest-playwright. Without
+      # this step they error rather than fail, and the suite silently drops from
+      # 582 to 547 while still reporting green.
+      - name: Install Playwright browser
+        run: playwright install --with-deps chromium
+
+      - name: Run tests
+        # profile.json is gitignored; user_profile falls back to
+        # profile.example.json on first access, so no fixture setup is needed.
+        run: pytest tests/ -q -p no:randomly
+
+      - name: Upload test artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-failure-${{ github.run_id }}
+          path: |
+            test-results/
+            .pytest_cache/
+          retention-days: 7
+          if-no-files-found: ignore
