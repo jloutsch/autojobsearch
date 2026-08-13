@@ -616,8 +616,15 @@ def test_profile_persists_across_reload(page, server_url):
     page.evaluate("localStorage.clear()")
 
 
-def test_company_links_survive_sorting(page, server_url):
-    """The table re-renders client-side, so the link must exist after interaction."""
+def test_rendered_page_has_company_links(page, server_url):
+    """Confirms a real browser renders the server-generated company links with
+    the expected href shape, and that sorting does not disturb them.
+
+    This is NOT the regression guard for the client-side buildJobRow path --
+    test_build_job_row_renders_company_link is, because sortTable() only
+    reorders existing DOM nodes via appendChild and never rebuilds a cell, so
+    the before/after count here can't actually detect a broken row builder.
+    """
     page.goto(f"{server_url}/2026-02-19.html")
     page.wait_for_selector("table tbody tr")
 
