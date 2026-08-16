@@ -1,5 +1,16 @@
 name: Daily Job Search
 
+# Runs on a self-hosted runner so AI scoring can reach a local Ollama. On a
+# GitHub-hosted runner there is no Ollama, and the pipeline would silently fall
+# back to rule-based scoring for every listing.
+#
+# SECURITY — do not add a `pull_request` trigger to this workflow.
+# This repository is public. A self-hosted runner executes whatever a workflow
+# tells it to, on the owner's own machine. `schedule` and `workflow_dispatch`
+# can only be triggered from the default branch by someone with write access, so
+# a fork's pull request cannot reach this runner. A `pull_request` trigger would
+# remove that protection and let anyone run arbitrary code on the host.
+# For the same reason, tests.yml stays on ubuntu-latest — it does run on PRs.
 on:
   schedule:
     # 8:00 AM EST = 13:00 UTC (standard time)
@@ -12,21 +23,41 @@ permissions:
 
 jobs:
   search:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
+      # A virtualenv inside the runner workspace, so dependencies never touch
+      # the host's system Python. Reused across runs; recreated if absent.
+      - name: Set up virtualenv
+        run: |
+          if [ ! -x .venv/bin/python ]; then
+            python3 -m venv .venv
+          fi
+          .venv/bin/python -m pip install --quiet --upgrade pip
+          .venv/bin/python -m pip install --quiet -r requirements.txt
+          .venv/bin/python --version
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      # Fail loudly rather than produce a rule-based-only report. A report that
+      # silently lost its AI scoring looks like a normal report, so the failure
+      # would go unnoticed until the rankings were quietly worse.
+      - name: Verify Ollama is reachable
+        run: |
+          MODEL="${OLLAMA_MODEL:-gemma3:4b}"
+          if ! curl -fsS --max-time 10 http://localhost:11434/api/tags -o /tmp/ollama-tags.json; then
+            echo "::error::Ollama is not reachable at http://localhost:11434 on this runner."
+            echo "::error::Start it (open -a Ollama) so the scheduled run can score listings."
+            exit 1
+          fi
+          if ! grep -q "\"$MODEL\"" /tmp/ollama-tags.json; then
+            echo "::error::Ollama is running but the model '$MODEL' is not pulled."
+            echo "::error::Run: ollama pull $MODEL"
+            exit 1
+          fi
+          echo "Ollama reachable, model '$MODEL' present."
 
       - name: Download previous seen_jobs database
         uses: actions/download-artifact@v4
@@ -36,9 +67,7 @@ jobs:
         continue-on-error: true  # First run won't have this
 
       - name: Run job search pipeline
-        run: python main.py
-        # Note: AI scoring requires Ollama which is not available in CI.
-        # The pipeline gracefully skips AI scoring and uses rule-based only.
+        run: .venv/bin/python main.py
 
       - name: Upload updated seen_jobs database
         uses: actions/upload-artifact@v4
